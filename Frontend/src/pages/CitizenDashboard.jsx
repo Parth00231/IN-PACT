@@ -89,6 +89,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   // Live Speech-to-Text Voice Complaint State
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState("hi-IN"); // "hi-IN" | "en-IN"
+  const [liveVoiceTranscript, setLiveVoiceTranscript] = useState("");
   const speechRecognitionRef = useRef(null);
   const isRecordingVoiceRef = useRef(false);
 
@@ -541,22 +542,28 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     setIsRecordingVoice(true);
     isRecordingVoiceRef.current = true;
     setFormError(null);
+    setLiveVoiceTranscript("");
     setFormDescription("");
     let charIndex = 0;
     const interval = setInterval(() => {
-      charIndex += 3;
+      charIndex += 2;
       if (charIndex <= sampleText.length) {
-        setFormDescription(sampleText.substring(0, charIndex));
+        const partial = sampleText.substring(0, charIndex);
+        setLiveVoiceTranscript(partial);
+        setFormDescription(partial);
       } else {
+        setLiveVoiceTranscript(sampleText);
         setFormDescription(sampleText);
         clearInterval(interval);
-        setIsRecordingVoice(false);
-        isRecordingVoiceRef.current = false;
+        setTimeout(() => {
+          setIsRecordingVoice(false);
+          isRecordingVoiceRef.current = false;
+        }, 600);
       }
-    }, 40);
+    }, 35);
   };
 
-  const handleToggleVoiceRecording = async () => {
+  const handleToggleVoiceRecording = () => {
     if (isRecordingVoice) {
       isRecordingVoiceRef.current = false;
       if (speechRecognitionRef.current) {
@@ -569,18 +576,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setFormError("Browser speech recognition is not supported on this device. Please use Chrome/Safari or click a sample voice test button.");
-      return;
-    }
-
-    // Explicitly prompt for mic permission first
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-      }
-    } catch (micErr) {
-      console.warn("Microphone access prompt:", micErr);
-      setFormError("Microphone access was denied or is unavailable. You can click 'Test Sample Voice' below to test automated speech triage.");
+      setFormError("Browser speech recognition is not supported on this browser/device. Please use Google Chrome, Safari, or Microsoft Edge, or click a Quick Voice Sample below.");
       return;
     }
 
@@ -594,26 +590,35 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       recognition.onstart = () => {
         setIsRecordingVoice(true);
         isRecordingVoiceRef.current = true;
+        setLiveVoiceTranscript("");
         setFormError(null);
       };
 
       recognition.onresult = (event) => {
-        let currentTranscript = "";
+        let interim = "";
+        let final = "";
         for (let i = 0; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            final += event.results[i][0].transcript + " ";
+          } else {
+            interim += event.results[i][0].transcript + " ";
+          }
         }
-        if (currentTranscript.trim()) {
-          setFormDescription(currentTranscript.trim());
+        const combined = (final + interim).trim();
+        if (combined) {
+          setLiveVoiceTranscript(combined);
+          setFormDescription(combined);
+          setFormError(null);
         }
       };
 
       recognition.onerror = (event) => {
-        console.warn("Speech recognition status event:", event.error);
+        console.warn("Speech recognition event:", event.error);
         if (event.error === "no-speech") {
-          return; // Continue listening
+          return; // Keep listening patiently
         }
-        if (event.error === "not-allowed") {
-          setFormError("Microphone permission was blocked. Please enable mic access in your browser settings.");
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setFormError("Microphone access was blocked. Please click the lock / settings icon in your browser address bar to allow microphone access, or use the 1-Click Voice Samples below.");
         }
         setIsRecordingVoice(false);
         isRecordingVoiceRef.current = false;
@@ -635,10 +640,10 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       speechRecognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.warn("Could not start speech recognition:", err);
+      console.warn("Speech recognition initialization error:", err);
       setIsRecordingVoice(false);
       isRecordingVoiceRef.current = false;
-      setFormError("Could not access microphone: " + err.message);
+      setFormError("Could not start microphone: " + err.message);
     }
   };
 
@@ -1208,9 +1213,48 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       </div>
 
                       {isRecordingVoice && (
-                        <div style={{ padding: "8px 12px", background: "#FFF1F2", border: "1px dashed #FDA4AF", borderRadius: "6px", marginBottom: "8px", fontSize: "12px", color: "#9F1239", display: "flex", alignItems: "center", gap: "8px" }}>
-                          <Mic size={14} className="animate-pulse text-red-600" />
-                          <span><strong>Listening...</strong> Speak clearly in {voiceLanguage === "hi-IN" ? "Hindi (हिन्दी)" : "English"}. Your speech will be transcribed in real time.</span>
+                        <div style={{
+                          padding: "10px 14px",
+                          background: "#FFF1F2",
+                          border: "1.5px solid #FDA4AF",
+                          borderRadius: "8px",
+                          marginBottom: "10px",
+                          fontSize: "12px",
+                          color: "#9F1239",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px"
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ position: "relative", display: "flex", height: "10px", width: "10px" }}>
+                                <span style={{ animation: "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite", position: "absolute", display: "inline-flex", height: "100%", width: "100%", borderRadius: "50%", background: "#E11D48", opacity: 0.75 }}></span>
+                                <span style={{ position: "relative", display: "inline-flex", borderRadius: "50%", height: "10px", width: "10px", background: "#BE123C" }}></span>
+                              </span>
+                              <strong>Listening ({voiceLanguage === "hi-IN" ? "हिन्दी / Hindi" : "English"})...</strong>
+                              <span style={{ color: "#881337", fontSize: "11px" }}>Speak into your microphone</span>
+                            </div>
+                            <span style={{ fontSize: "11px", fontWeight: 600, color: "#BE123C" }}>🔴 LIVE STREAM</span>
+                          </div>
+
+                          {liveVoiceTranscript ? (
+                            <div style={{
+                              background: "#FFE4E6",
+                              padding: "6px 10px",
+                              borderRadius: "6px",
+                              borderLeft: "3px solid #E11D48",
+                              color: "#881337",
+                              fontSize: "12px",
+                              fontWeight: 500,
+                              fontStyle: "italic"
+                            }}>
+                              “{liveVoiceTranscript}”
+                            </div>
+                          ) : (
+                            <div style={{ color: "#9F1239", fontSize: "11px", opacity: 0.85 }}>
+                              Waiting for your voice... (If nothing appears, make sure your browser has microphone permission enabled)
+                            </div>
+                          )}
                         </div>
                       )}
 
