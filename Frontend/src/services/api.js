@@ -1,9 +1,16 @@
 // Central API client. Every call to the backend should go through `apiFetch`
 // so auth headers, error handling, and the base URL live in exactly one place.
 
-// Vite exposes env vars prefixed with VITE_ — add VITE_API_URL to Frontend/.env
-// (create it if it doesn't exist): VITE_API_URL=http://localhost:5000/api
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// Auto-normalize base URL to guarantee /api suffix regardless of trailing slashes or user env input
+function getNormalizedBaseUrl() {
+  let url = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").trim().replace(/\/+$/, "");
+  if (!url.endsWith("/api")) {
+    url += "/api";
+  }
+  return url;
+}
+
+const BASE_URL = getNormalizedBaseUrl();
 
 const TOKEN_KEY = "inpact_token";
 

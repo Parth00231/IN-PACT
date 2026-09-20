@@ -47,9 +47,16 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 app.get("/api/health", (req, res) => res.json({ success: true, status: "ok" }));
+app.get("/health", (req, res) => res.json({ success: true, status: "ok" }));
+app.get("/", (req, res) => res.json({ success: true, message: "IN-PACT API is running smoothly", version: "1.0.0" }));
 
+// Primary API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/issues", issueRoutes);
+
+// Fallback Route Aliases (Handles requests with or without /api prefix)
+app.use("/auth", authRoutes);
+app.use("/issues", issueRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

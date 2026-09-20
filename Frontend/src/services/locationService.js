@@ -101,8 +101,8 @@ export async function getLiveDeviceLocation() {
           isLiveGps: true,
         });
       },
-      (error) => {
-        console.warn("Geolocation warning:", error.message);
+      (_error) => {
+        // Fallback to default municipal zone smoothly if user denies or location times out
         resolve(getFallbackLocation());
       },
       options
