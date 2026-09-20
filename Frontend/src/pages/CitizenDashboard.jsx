@@ -54,9 +54,9 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFileName, setPhotoFileName] = useState("");
   const [selectedPresetId, setSelectedPresetId] = useState(null);
-  const [formLocation, setFormLocation] = useState(currentUser?.address || "");
-  const [formWard, setFormWard] = useState(currentUser?.ward || "Auto-detected Civic Zone");
-  const [formGps, setFormGps] = useState("Auto-detecting GPS...");
+  const [formLocation, setFormLocation] = useState("Knowledge Park III, Main Arterial Road");
+  const [formWard, setFormWard] = useState("Ward 12 - Knowledge Park III");
+  const [formGps, setFormGps] = useState("28.4682° N, 77.5028° E (Live Geotag)");
   const [locationAutoFetched, setLocationAutoFetched] = useState(false);
   const [exifLocationInfo, setExifLocationInfo] = useState(null); // { isExif: boolean, source: 'exif' | 'device', timestamp?: string }
 
@@ -321,7 +321,6 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   useEffect(() => {
     loadMyGrievances();
     loadCommunityFeed();
-    triggerAutoLocationFetch();
     if (currentUser?.ward) {
       getStats(currentUser.ward)
         .then((stats) => setWardStats(stats.ward))
@@ -1113,25 +1112,18 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
 
                       <div className="gov-form-group">
                         <label className="gov-form-label">Municipal Ward / Zone (वार्ड / जोन) *</label>
-                        <input
-                          type="text"
-                          className="gov-input"
+                        <select
+                          className="gov-select"
                           value={formWard}
                           onChange={(e) => setFormWard(e.target.value)}
-                          placeholder="e.g. Ward 12, Sector Alpha, Central Zone..."
-                          list="municipal-ward-options"
                           required
-                        />
-                        <datalist id="municipal-ward-options">
-                          <option value="Ward 12 - Knowledge Park III & Expressways" />
-                          <option value="Ward 5 - Sector Alpha 1 & 2 Commercial" />
-                          <option value="Ward 8 - Sector Beta 1 & 2" />
-                          <option value="Ward 9 - Sector Delta 1 & 2" />
-                          <option value="Ward 1 - Pari Chowk Central Zone" />
-                          <option value="Central Municipal Zone" />
-                          <option value="North Municipal Sector" />
-                          <option value="South Municipal Sector" />
-                        </datalist>
+                        >
+                          <option value="Ward 12 - Knowledge Park III">Ward 12 - Knowledge Park III & Expressways</option>
+                          <option value="Ward 5 - Sector Alpha 1 & 2">Ward 5 - Sector Alpha 1 & 2 Commercial</option>
+                          <option value="Ward 8 - Sector Beta 1 & 2">Ward 8 - Sector Beta 1 & 2</option>
+                          <option value="Ward 9 - Sector Delta 1 & 2">Ward 9 - Sector Delta 1 & 2</option>
+                          <option value="Ward 1 - Pari Chowk Central Zone">Ward 1 - Pari Chowk Central Zone</option>
+                        </select>
                       </div>
                     </div>
 
