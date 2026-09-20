@@ -48,7 +48,7 @@ export default function GovernmentDashboard({ currentUser, navigateTo }) {
     {
       id: "gov-001",
       _id: "gov-001",
-      refId: "UP-GND-2026-8091",
+      refId: "RN20260920A8091",
       title: "Major Pothole & Cave-in on Main Commercial Road",
       description: "Severe 3-foot wide bitumen crater causing vehicular damage and traffic congestion near Knowledge Park 3 metro pillar 42.",
       category: "Roads & Arterial Infrastructure",
@@ -64,7 +64,7 @@ export default function GovernmentDashboard({ currentUser, navigateTo }) {
     {
       id: "gov-002",
       _id: "gov-002",
-      refId: "UP-GND-2026-7914",
+      refId: "RN20260920B7914",
       title: "Overhead 11kV Power Cable Sagging Near Footpath",
       description: "High tension electrical cable hanging dangerously low near residential society gate in Alpha 1.",
       category: "Power Grid & Electrical Safety",
@@ -80,7 +80,7 @@ export default function GovernmentDashboard({ currentUser, navigateTo }) {
     {
       id: "gov-003",
       _id: "gov-003",
-      refId: "UP-GND-2026-8105",
+      refId: "RN20260920D8105",
       title: "Garbage Dump Accumulation & Stray Cattle Hazard",
       description: "Unattended municipal garbage dump on Delta 2 perimeter attracting stray cattle for 4 days.",
       category: "Municipal Solid Waste Management",
@@ -96,7 +96,7 @@ export default function GovernmentDashboard({ currentUser, navigateTo }) {
     {
       id: "gov-004",
       _id: "gov-004",
-      refId: "UP-GND-2026-6820",
+      refId: "RN20260920C6820",
       title: "Main Drinking Water Pipeline Burst & Clean Water Loss",
       description: "High-pressure clean water supply pipeline ruptured on sector avenue road, flooding sidewalk.",
       category: "Drinking Water Supply",
@@ -112,7 +112,7 @@ export default function GovernmentDashboard({ currentUser, navigateTo }) {
     {
       id: "gov-005",
       _id: "gov-005",
-      refId: "UP-GND-2026-5541",
+      refId: "RN20260920E5541",
       title: "Broken LED Street Light Fixture & Dark Spot Hazard",
       description: "Four consecutive street lamps non-functional on main sector boulevard causing safety risk.",
       category: "Street Lighting & Public Safety",

@@ -105,29 +105,101 @@ export default function Home({ navigateTo }) {
 
   const handleSearchTracking = (e) => {
     e.preventDefault();
-    if (!searchRefId.trim()) return;
+    const query = searchRefId.trim();
+    if (!query) return;
 
-    if (searchRefId.toUpperCase().includes("8091") || searchRefId.toUpperCase().includes("PWD")) {
+    // 1. Search in local storage (user submitted grievances & community feed)
+    let found = null;
+    try {
+      const history = JSON.parse(localStorage.getItem("inpact_grievances_history") || "[]");
+      const community = JSON.parse(localStorage.getItem("inpact_community_feed_issues") || "[]");
+      const myGrievances = JSON.parse(localStorage.getItem("inpact_my_grievances") || "[]");
+      const allLocal = [...history, ...community, ...myGrievances];
+      found = allLocal.find(
+        (g) =>
+          (g.refId && g.refId.toUpperCase() === query.toUpperCase()) ||
+          (g.id && String(g.id).toLowerCase() === query.toLowerCase()) ||
+          (g._id && String(g._id).toLowerCase() === query.toLowerCase())
+      );
+    } catch (err) {
+      console.warn("Storage lookup error:", err);
+    }
+
+    if (found) {
+      const statusMap = {
+        submitted: { label: "Registered & Triaged (In Queue)", class: "status-triaged" },
+        assigned: { label: "Assigned to Statutory Nodal Unit", class: "status-triaged" },
+        in_progress: { label: "In Progress (Field Crew Deployed)", class: "status-progress" },
+        resolved: { label: "Resolved & Verified", class: "status-resolved" },
+      };
+      const statInfo = statusMap[found.status] || {
+        label: found.status ? found.status.toUpperCase() : "Under Active Review",
+        class: "status-progress",
+      };
+
       setSearchStatusResult({
-        id: "UP-GND-2026-8091",
+        id: found.refId || query.toUpperCase(),
+        title: found.title || "Civic Infrastructure Grievance",
+        department: found.department || "Public Works Department (PWD)",
+        status: statInfo.label,
+        nodal: found.assignedOfficer || "Er. S.K. Sharma (Chief Executive Engineer)",
+        registeredOn: found.createdAt
+          ? new Date(found.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+          : new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
+        slaTarget: found.slaRemaining || "6 Hours Emergency Statutory SLA",
+        statusClass: statInfo.class,
+        location: found.location?.address || found.location?.ward || "Greater Noida Metropolis",
+        category: found.category || "Municipal Infrastructure",
+      });
+      return;
+    }
+
+    // 2. Built-in demo sample cases
+    if (query.toUpperCase().includes("8091") || query.toUpperCase().includes("PWD")) {
+      setSearchStatusResult({
+        id: query.toUpperCase().startsWith("RN") ? query.toUpperCase() : "RN20260920A8091",
         title: "Major Pothole & Cave-in on Main Commercial Road",
         department: "Public Works Department (PWD - Division 2)",
         status: "In Progress (Field Crew On-Site)",
         nodal: "Er. S.K. Sharma (EE, PWD)",
-        registeredOn: "20 Aug 2026, 10:15 AM",
-        slaTarget: "20 Aug 2026, 04:15 PM (6 Hours)",
-        statusClass: "status-progress"
+        registeredOn: "20 Sep 2026, 10:15 AM",
+        slaTarget: "20 Sep 2026, 04:15 PM (6 Hours SLA)",
+        statusClass: "status-progress",
+        location: "Pari Chowk to KP-3 Road, Greater Noida",
+        category: "Roads & Arterial Infrastructure",
+      });
+    } else if (query.toUpperCase().includes("7914") || query.toUpperCase().includes("NPCL") || query.toUpperCase().includes("POWER")) {
+      setSearchStatusResult({
+        id: query.toUpperCase().startsWith("RN") ? query.toUpperCase() : "RN20260920B7914",
+        title: "Overhead 11kV Power Cable Sagging Near Footpath",
+        department: "NPCL State Power Distribution Grid",
+        status: "Assigned & Inspection Scheduled",
+        nodal: "R.K. Gupta (Divisional Engineer)",
+        registeredOn: "20 Sep 2026, 09:30 AM",
+        slaTarget: "20 Sep 2026, 11:30 AM (2 Hours SLA)",
+        statusClass: "status-triaged",
+        location: "Gate 2, Sector Alpha 1",
+        category: "Power Grid & Electrical Safety",
       });
     } else {
+      // Dynamic parse for any reference number in RN format
+      const dateMatch = query.match(/^RN(\d{4})(\d{2})(\d{2})/i);
+      let dateStr = "20 Sep 2026, 08:30 AM";
+      if (dateMatch) {
+        const [_, y, m, d] = dateMatch;
+        dateStr = `${d}/${m}/${y}, 10:00 AM`;
+      }
       setSearchStatusResult({
-        id: searchRefId.toUpperCase(),
-        title: "Stormwater Drainage Desilting & Silt Removal",
-        department: "UP Jal Nigam (Zone 1)",
-        status: "Assigned & Triaged to Nodal Unit",
-        nodal: "Er. A.K. Srivastava (SE)",
-        registeredOn: "20 Aug 2026, 08:30 AM",
-        slaTarget: "21 Aug 2026, 08:30 AM (24 Hours)",
-        statusClass: "status-triaged"
+        id: query.toUpperCase(),
+        title: "Civic Infrastructure & Maintenance Grievance",
+        department: "Municipal Corporation & Nodal Engineering Wing",
+        status: "Assigned & Triaged to Statutory Nodal Unit",
+        nodal: "Er. A.K. Srivastava (Superintending Engineer)",
+        registeredOn: dateStr,
+        slaTarget: "Active SLA Timer (12-24 Hours)",
+        statusClass: "status-triaged",
+        location: "Greater Noida Central Division",
+        category: "Public Grievance",
       });
     }
   };
@@ -193,7 +265,7 @@ export default function Home({ navigateTo }) {
                   </div>
                   <div>
                     <h3>Track Grievance / Application</h3>
-                    <p>Enter your Grievance Reference ID (e.g. UP-GND-2026-8091)</p>
+                    <p>Enter your Grievance Reference Number (e.g. RN20260920A4819)</p>
                   </div>
                 </div>
               </div>
@@ -202,7 +274,7 @@ export default function Home({ navigateTo }) {
                 <div className="tracker-input-wrapper">
                   <input
                     type="text"
-                    placeholder="Enter Reference No. (e.g. UP-GND-2026-8091)"
+                    placeholder="Enter Reference No. (e.g. RN20260920A4819)"
                     value={searchRefId}
                     onChange={(e) => setSearchRefId(e.target.value)}
                     className="gov-input tracker-input"
@@ -240,6 +312,18 @@ export default function Home({ navigateTo }) {
                       <strong className="text-amber">{searchStatusResult.slaTarget}</strong>
                     </div>
                   </div>
+                  {searchStatusResult.location && (
+                    <div style={{ marginTop: "10px", fontSize: "12px", color: "#475569", borderTop: "1px dashed #E2E8F0", paddingTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span><strong>Location:</strong> {searchStatusResult.location}</span>
+                      <button
+                        type="button"
+                        onClick={() => navigateTo("citizen-dashboard")}
+                        style={{ color: "#002B49", fontWeight: 600, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", fontSize: "12px" }}
+                      >
+                        View in Citizen Portal →
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

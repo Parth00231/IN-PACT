@@ -34,7 +34,8 @@ import {
   ArrowRight,
   Activity,
   Layers,
-  FileCheck
+  FileCheck,
+  Copy
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import StatCard from "../components/StatCard";
@@ -43,6 +44,7 @@ import MapView from "../components/MapView";
 import { getMyIssues, getIssues, createIssue, toggleUpvote, getStats } from "../services/issuesService";
 import { analyzeCivicIssue, CIVIC_PRESETS, INVALID_IMAGE_PRESETS } from "../services/aiClassifierService";
 import { getLiveDeviceLocation } from "../services/locationService";
+import { generateReferenceNumber, saveGrievanceHistory } from "../utils/referenceNumber";
 
 export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [activeTab, setActiveTab] = useState("overview"); // overview | report | track | map | community
@@ -96,8 +98,10 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   // Ward-level resolution rate stat
   const [wardStats, setWardStats] = useState(null);
 
-  // Track complaints filter & Hand-raise notification toast
+  // Track complaints filter, search & Hand-raise notification toast
   const [trackFilter, setTrackFilter] = useState("all"); // "all" | "highest_priority" | "my"
+  const [trackSearchQuery, setTrackSearchQuery] = useState("");
+  const [copiedRef, setCopiedRef] = useState(false);
   const [raiseHandToast, setRaiseHandToast] = useState(null);
 
   // Community Feed search, filter & sort state
@@ -114,7 +118,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     {
       id: "g-001",
       _id: "g-001",
-      refId: "UP-GND-2026-8091",
+      refId: "RN20260920A8091",
       title: "Major Pothole & Cave-in on Main Commercial Road",
       description: "Severe 3-foot wide bitumen crater causing vehicular damage and traffic congestion near Knowledge Park 3 metro pillar 42.",
       category: "Roads & Arterial Infrastructure",
@@ -131,7 +135,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     {
       id: "g-002",
       _id: "g-002",
-      refId: "UP-GND-2026-7914",
+      refId: "RN20260920B7914",
       title: "Overhead 11kV Power Cable Sagging Near Footpath",
       description: "High tension electrical cable hanging dangerously low near residential society gate in Alpha 1.",
       category: "Power Grid & Electrical Safety",
@@ -148,7 +152,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     {
       id: "g-003",
       _id: "g-003",
-      refId: "UP-GND-2026-6820",
+      refId: "RN20260920C6820",
       title: "Blocked Stormwater Culvert Drain",
       description: "Culvert choke causing overflow and foul smell along commercial market walkway.",
       category: "Drainage & Flood Control",
@@ -169,7 +173,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     {
       id: "g-004",
       _id: "g-004",
-      refId: "UP-GND-2026-8105",
+      refId: "RN20260920D8105",
       title: "Garbage Dump Accumulation & Stray Cattle Hazard",
       description: "Unattended municipal garbage dump on Delta 2 perimeter attracting stray cattle for 4 days.",
       category: "Municipal Solid Waste Management",
@@ -186,7 +190,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     {
       id: "g-005",
       _id: "g-005",
-      refId: "UP-GND-2026-8120",
+      refId: "RN20260920E8120",
       title: "Malfunctioning Traffic Signals at Crossing",
       description: "Traffic lights stuck on blinking yellow causing heavy gridlock during peak hours.",
       category: "Traffic & Mobility",
@@ -572,7 +576,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     setIsAiAnalyzing(true);
     setFormError(null);
 
-    const generatedCode = "UP-GND-2026-" + Math.floor(1000 + Math.random() * 9000);
+    const generatedCode = generateReferenceNumber();
     const localNewIssue = {
       id: "local-" + Date.now(),
       _id: "local-" + Date.now(),
@@ -616,6 +620,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
 
       setGeneratedRefId(issueToSave.refId);
       saveGrievanceToStorage(issueToSave);
+      saveGrievanceHistory(issueToSave);
       setMyGrievances((prev) => [issueToSave, ...prev.filter((g) => g.id !== issueToSave.id && g.refId !== issueToSave.refId)]);
       setCommunityGrievances((prev) => [issueToSave, ...prev.filter((g) => g.id !== issueToSave.id && g.refId !== issueToSave.refId)]);
       setReportStep("success");
@@ -623,6 +628,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       // Fallback in demo mode / offline
       setGeneratedRefId(generatedCode);
       saveGrievanceToStorage(localNewIssue);
+      saveGrievanceHistory(localNewIssue);
       setMyGrievances((prev) => [localNewIssue, ...prev.filter((g) => g.id !== localNewIssue.id && g.refId !== localNewIssue.refId)]);
       setCommunityGrievances((prev) => [localNewIssue, ...prev.filter((g) => g.id !== localNewIssue.id && g.refId !== localNewIssue.refId)]);
       setReportStep("success");
@@ -1416,9 +1422,38 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                     <ShieldCheck size={36} color="#059669" />
                   </div>
                   <span className="success-badge-official"><CheckCircle2 size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> GRIEVANCE REGISTERED & ROUTED SUCCESSFULLY</span>
-                  <h2>Acknowledgement Reference Number: <strong>{generatedRefId}</strong></h2>
+                  <h2 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                    Acknowledgement Reference: <strong style={{ color: "#0F172A", letterSpacing: "0.5px" }}>{generatedRefId}</strong>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (generatedRefId) {
+                          navigator.clipboard?.writeText(generatedRefId);
+                          setCopiedRef(true);
+                          setTimeout(() => setCopiedRef(false), 2500);
+                        }
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid #CBD5E1",
+                        background: copiedRef ? "#ECFDF5" : "#F8FAFC",
+                        color: copiedRef ? "#059669" : "#334155",
+                        cursor: "pointer"
+                      }}
+                      title="Copy Reference Number"
+                    >
+                      {copiedRef ? <Check size={13} color="#059669" /> : <Copy size={13} />}
+                      {copiedRef ? "Copied!" : "Copy ID"}
+                    </button>
+                  </h2>
                   <p className="success-desc">
-                    Your civic issue has been officially registered and routed to <strong>{confirmedDepartment}</strong> with an active statutory SLA timer.
+                    Your civic issue has been officially registered with Reference ID <strong>{generatedRefId}</strong> and routed to <strong>{confirmedDepartment}</strong> with an active statutory SLA timer.
                   </p>
 
                   <div className="official-receipt-box">
@@ -1427,7 +1462,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       <span>DATE: {new Date().toLocaleDateString("en-IN")}</span>
                     </div>
                     <div className="receipt-grid">
-                      <div><span className="r-label">Grievance Ref ID:</span> <strong>{generatedRefId}</strong></div>
+                      <div><span className="r-label">Grievance Ref ID:</span> <strong style={{ color: "#002B49" }}>{generatedRefId}</strong></div>
                       <div><span className="r-label">Complainant:</span> <strong>{currentUser?.name || "Ananya Sharma"}</strong></div>
                       <div><span className="r-label">Identified Category:</span> <strong>{confirmedCategory}</strong></div>
                       <div><span className="r-label">Nodal Department:</span> <strong>{confirmedDepartment}</strong></div>
@@ -1543,6 +1578,34 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                   </div>
                 </div>
 
+                {/* Quick Reference Search Bar */}
+                <div style={{ padding: "12px 20px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0", display: "flex", gap: "10px", alignItems: "center" }}>
+                  <Search size={16} style={{ color: "#64748B", flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    placeholder="Search by Reference Number (e.g. RN20260920A4819) or keyword..."
+                    value={trackSearchQuery}
+                    onChange={(e) => setTrackSearchQuery(e.target.value)}
+                    style={{
+                      flex: 1,
+                      border: "none",
+                      background: "transparent",
+                      fontSize: "14px",
+                      outline: "none",
+                      color: "#1E293B"
+                    }}
+                  />
+                  {trackSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setTrackSearchQuery("")}
+                      style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B", fontSize: "12px", padding: "2px 6px" }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
                 {loadingMy && loadingCommunity ? (
                   <p style={{ padding: "24px", color: "#64748B", textAlign: "center" }}>Loading official grievance records…</p>
                 ) : (
@@ -1552,14 +1615,28 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       if (trackFilter === "highest_priority") {
                         list = [...communityGrievances].sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
                       }
+                      if (trackSearchQuery.trim()) {
+                        const q = trackSearchQuery.trim().toLowerCase();
+                        list = list.filter(g =>
+                          (g.refId && g.refId.toLowerCase().includes(q)) ||
+                          (g.title && g.title.toLowerCase().includes(q)) ||
+                          (g.department && g.department.toLowerCase().includes(q)) ||
+                          (g.category && g.category.toLowerCase().includes(q))
+                        );
+                      }
                       if (!list || list.length === 0) {
-                        return <p style={{ padding: "24px", color: "#64748B" }}>No complaints found under this view.</p>;
+                        return (
+                          <div style={{ padding: "36px 24px", textAlign: "center", color: "#64748B" }}>
+                            <p style={{ fontWeight: 600, fontSize: "15px", marginBottom: "6px" }}>No complaints found matching "{trackSearchQuery}".</p>
+                            <p style={{ fontSize: "13px" }}>Check the reference number format (e.g., RN20260920A4819) or select "All Complaints".</p>
+                          </div>
+                        );
                       }
                       return list.map((g) => (
                         <div key={g.id || g._id} className="dossier-card">
                           <div className="dossier-top">
                             <div className="dossier-ref-group">
-                              <span className="dossier-ref-pill">{g.refId || "UP-GND-2026-LIVE"}</span>
+                              <span className="dossier-ref-pill">{g.refId || "RN-LIVE"}</span>
                               <span className={`priority-badge priority-${g.severity || "medium"}`}>
                                 {(g.severity || "medium").toUpperCase()} PRIORITY
                               </span>

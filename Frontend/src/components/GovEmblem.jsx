@@ -66,7 +66,8 @@ export function GovDigitalIndiaBadge({ size = 36 }) {
   return (
     <div className="digital-india-badge" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
       <div style={{
-        background: "linear-gradient(135deg, #FF9933 0%, #FFFFFF 50%, #138808 100%)",
+        backgroundColor: "#0A2540",
+        border: "1px solid #1E3A8A",
         padding: "2px",
         borderRadius: "4px",
         display: "inline-block"

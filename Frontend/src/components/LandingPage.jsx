@@ -163,7 +163,7 @@ export default function LandingPage() {
             <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight sm:text-6xl text-text-primary">
               Smarter Cities.
               <br />
-              <span className="bg-gradient-to-r from-brand via-ai-cyan to-ai-purple bg-clip-text text-transparent">
+              <span className="text-brand">
                 Faster Action.
               </span>
             </h1>

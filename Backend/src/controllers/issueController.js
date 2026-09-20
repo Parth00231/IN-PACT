@@ -1,13 +1,14 @@
+const mongoose = require("mongoose");
 const Issue = require("../models/Issue");
 const asyncHandler = require("../middleware/asyncHandler");
 const { ISSUE_STATUSES, DEPARTMENTS } = require("../config/constants");
 const { assignDepartment, isValidDepartmentCode } = require("../utils/autoRoute");
 
 // @route  GET /api/issues
-// @query  status, severity, category, department, lat, lng, radiusKm, page, limit
+// @query  status, severity, category, department, lat, lng, radiusKm, refId, search, page, limit
 // @access Public (citizens see all; admins may later get extra fields)
 const getIssues = asyncHandler(async (req, res) => {
-  const { status, severity, category, department, ward, mine, page = 1, limit = 20 } = req.query;
+  const { status, severity, category, department, ward, refId, search, mine, page = 1, limit = 20 } = req.query;
 
   const filter = {};
   if (status) filter.status = status;
@@ -15,6 +16,15 @@ const getIssues = asyncHandler(async (req, res) => {
   if (category) filter.category = category;
   if (department) filter.department = department;
   if (ward) filter["location.ward"] = ward;
+  if (refId) filter.refId = new RegExp(`^${refId.trim()}$`, "i");
+  if (search) {
+    const q = search.trim();
+    filter.$or = [
+      { refId: new RegExp(q, "i") },
+      { title: new RegExp(q, "i") },
+      { description: new RegExp(q, "i") },
+    ];
+  }
 
   // ?mine=true — used by CitizenDashboard.jsx's "My Grievances" tab. Requires auth
   // (optionalAuth still lets the route be public, but this filter only works
@@ -57,9 +67,14 @@ const getIssues = asyncHandler(async (req, res) => {
 });
 
 // @route  GET /api/issues/:id
-// @access Public
+// @access Public (supports Mongo _id or custom Reference ID e.g. RN20260920A4819)
 const getIssueById = asyncHandler(async (req, res) => {
-  const issue = await Issue.findById(req.params.id).populate("reportedBy", "name ward");
+  const query = req.params.id;
+  const isMongoId = mongoose.Types.ObjectId.isValid(query) && query.length === 24;
+  const issue = isMongoId
+    ? await Issue.findById(query).populate("reportedBy", "name ward")
+    : await Issue.findOne({ refId: new RegExp(`^${query.trim()}$`, "i") }).populate("reportedBy", "name ward");
+
   if (!issue) {
     res.status(404);
     throw new Error("Issue not found");

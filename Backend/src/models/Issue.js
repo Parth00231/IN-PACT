@@ -83,16 +83,21 @@ issueSchema.pre("save", function setSlaDeadline(next) {
   next();
 });
 
-// Generate a human-readable refId like "UP-GND-2026-8091" on first save.
+// Generate a human-readable refId in format "RNYYYYMMDD(A to Z)XXXX" on first save.
 // Retries a few times on the (rare) chance of a collision, since it's random-based.
 issueSchema.pre("save", async function setRefId(next) {
   if (!this.isNew || this.refId) return next();
 
-  const year = new Date().getFullYear();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
   const Issue = this.constructor;
 
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const candidate = `UP-GND-${year}-${Math.floor(1000 + Math.random() * 9000)}`;
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // A-Z
+    const num = Math.floor(1000 + Math.random() * 9000); // 4-digit positive integer
+    const candidate = `RN${year}${month}${day}${letter}${num}`;
     // eslint-disable-next-line no-await-in-loop
     const existing = await Issue.findOne({ refId: candidate }).select("_id");
     if (!existing) {
