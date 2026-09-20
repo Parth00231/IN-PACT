@@ -90,6 +90,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState("hi-IN"); // "hi-IN" | "en-IN"
   const speechRecognitionRef = useRef(null);
+  const isRecordingVoiceRef = useRef(false);
 
   // Citizen's personal tracked grievances — now fetched from the real backend
   const [myGrievances, setMyGrievances] = useState([]);
@@ -533,8 +534,31 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleToggleVoiceRecording = () => {
+  const handleSimulateVoiceSample = (sampleText) => {
+    if (speechRecognitionRef.current) {
+      try { speechRecognitionRef.current.stop(); } catch (e) {}
+    }
+    setIsRecordingVoice(true);
+    isRecordingVoiceRef.current = true;
+    setFormError(null);
+    setFormDescription("");
+    let charIndex = 0;
+    const interval = setInterval(() => {
+      charIndex += 3;
+      if (charIndex <= sampleText.length) {
+        setFormDescription(sampleText.substring(0, charIndex));
+      } else {
+        setFormDescription(sampleText);
+        clearInterval(interval);
+        setIsRecordingVoice(false);
+        isRecordingVoiceRef.current = false;
+      }
+    }, 40);
+  };
+
+  const handleToggleVoiceRecording = async () => {
     if (isRecordingVoice) {
+      isRecordingVoiceRef.current = false;
       if (speechRecognitionRef.current) {
         try { speechRecognitionRef.current.stop(); } catch (e) {}
       }
@@ -543,8 +567,20 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
     if (!SpeechRecognition) {
-      setFormError("Browser speech recognition is not supported on this device. Please type your description.");
+      setFormError("Browser speech recognition is not supported on this device. Please use Chrome/Safari or click a sample voice test button.");
+      return;
+    }
+
+    // Explicitly prompt for mic permission first
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+    } catch (micErr) {
+      console.warn("Microphone access prompt:", micErr);
+      setFormError("Microphone access was denied or is unavailable. You can click 'Test Sample Voice' below to test automated speech triage.");
       return;
     }
 
@@ -553,9 +589,11 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       recognition.lang = voiceLanguage;
       recognition.continuous = true;
       recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
         setIsRecordingVoice(true);
+        isRecordingVoiceRef.current = true;
         setFormError(null);
       };
 
@@ -570,12 +608,28 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       };
 
       recognition.onerror = (event) => {
-        console.warn("Speech recognition error:", event.error);
+        console.warn("Speech recognition status event:", event.error);
+        if (event.error === "no-speech") {
+          return; // Continue listening
+        }
+        if (event.error === "not-allowed") {
+          setFormError("Microphone permission was blocked. Please enable mic access in your browser settings.");
+        }
         setIsRecordingVoice(false);
+        isRecordingVoiceRef.current = false;
       };
 
       recognition.onend = () => {
-        setIsRecordingVoice(false);
+        if (isRecordingVoiceRef.current) {
+          try {
+            recognition.start();
+          } catch (e) {
+            setIsRecordingVoice(false);
+            isRecordingVoiceRef.current = false;
+          }
+        } else {
+          setIsRecordingVoice(false);
+        }
       };
 
       speechRecognitionRef.current = recognition;
@@ -583,7 +637,8 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     } catch (err) {
       console.warn("Could not start speech recognition:", err);
       setIsRecordingVoice(false);
-      setFormError("Could not access microphone. Please check browser permissions.");
+      isRecordingVoiceRef.current = false;
+      setFormError("Could not access microphone: " + err.message);
     }
   };
 
@@ -1170,6 +1225,32 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                           setFormError(null);
                         }}
                       />
+
+                      {/* Quick Voice Simulation Sample Chips */}
+                      <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", fontSize: "11px", color: "#64748B" }}>
+                        <span style={{ fontWeight: 600 }}>Quick Voice Samples:</span>
+                        <button
+                          type="button"
+                          onClick={() => handleSimulateVoiceSample("पारी चौक के पास गहरा गड्ढा है जिससे गाड़ियां टकरा रही हैं")}
+                          style={{ border: "1px solid #CBD5E1", background: "#F1F5F9", padding: "2px 8px", borderRadius: "12px", cursor: "pointer", color: "#1E293B", fontSize: "11px" }}
+                        >
+                          🇮🇳 "पारी चौक के पास गहरा गड्ढा है..."
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSimulateVoiceSample("High tension 11kV electrical cable sagging dangerously near residential gate in Alpha 1")}
+                          style={{ border: "1px solid #CBD5E1", background: "#F1F5F9", padding: "2px 8px", borderRadius: "12px", cursor: "pointer", color: "#1E293B", fontSize: "11px" }}
+                        >
+                          🇬🇧 "11kV electrical cable sagging..."
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSimulateVoiceSample("Main stormwater culvert drain clogged with garbage causing heavy waterlogging")}
+                          style={{ border: "1px solid #CBD5E1", background: "#F1F5F9", padding: "2px 8px", borderRadius: "12px", cursor: "pointer", color: "#1E293B", fontSize: "11px" }}
+                        >
+                          🇬🇧 "Culvert drain choked..."
+                        </button>
+                      </div>
                     </div>
 
                     {/* GPS Auto-Fetching Status Banner */}
