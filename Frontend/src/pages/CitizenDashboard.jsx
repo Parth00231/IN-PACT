@@ -26,7 +26,6 @@ import {
   PlusCircle,
   Check,
   Compass,
-  Radio,
   Building2,
   BarChart3,
   TrendingUp,
@@ -34,7 +33,6 @@ import {
   ArrowRight,
   Activity,
   Layers,
-  FileCheck,
   Copy
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
