@@ -33,10 +33,7 @@ import {
   ArrowRight,
   Activity,
   Layers,
-  Copy,
-  Mic,
-  MicOff,
-  QrCode
+  Copy
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import StatCard from "../components/StatCard";
@@ -85,11 +82,6 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [generatedRefId, setGeneratedRefId] = useState("");
   const [formError, setFormError] = useState(null);
   const fileInputRef = useRef(null);
-
-  // Live Speech-to-Text Voice Complaint State
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [voiceLanguage, setVoiceLanguage] = useState("hi-IN"); // "hi-IN" | "en-IN"
-  const speechRecognitionRef = useRef(null);
 
   // Citizen's personal tracked grievances — now fetched from the real backend
   const [myGrievances, setMyGrievances] = useState([]);
@@ -531,60 +523,6 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     setPhotoFileName("");
     setSelectedPresetId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleToggleVoiceRecording = () => {
-    if (isRecordingVoice) {
-      if (speechRecognitionRef.current) {
-        try { speechRecognitionRef.current.stop(); } catch (e) {}
-      }
-      setIsRecordingVoice(false);
-      return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setFormError("Browser speech recognition is not supported on this device. Please type your description.");
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = voiceLanguage;
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognition.onstart = () => {
-        setIsRecordingVoice(true);
-        setFormError(null);
-      };
-
-      recognition.onresult = (event) => {
-        let currentTranscript = "";
-        for (let i = 0; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript;
-        }
-        if (currentTranscript.trim()) {
-          setFormDescription(currentTranscript.trim());
-        }
-      };
-
-      recognition.onerror = (event) => {
-        console.warn("Speech recognition error:", event.error);
-        setIsRecordingVoice(false);
-      };
-
-      recognition.onend = () => {
-        setIsRecordingVoice(false);
-      };
-
-      speechRecognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.warn("Could not start speech recognition:", err);
-      setIsRecordingVoice(false);
-      setFormError("Could not access microphone. Please check browser permissions.");
-    }
   };
 
   const handleRunAiDiagnostic = async (e) => {
@@ -1088,82 +1026,17 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       )}
                     </div>
 
-                    {/* 2. PROBLEM DESCRIPTION SECTION WITH VOICE COMPLAINT */}
+                    {/* 2. PROBLEM DESCRIPTION SECTION (MANDATORY) */}
                     <div className="gov-form-group">
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", flexWrap: "wrap", gap: "8px" }}>
-                        <label className="gov-form-label" style={{ marginBottom: 0 }}>
-                          <span>Problem Description (समस्या का पूरा विवरण) *</span>
-                          <span className="label-sub-tag" style={{ color: "#E11D48", fontWeight: 700 }}>* Mandatory • Multilingual NLP</span>
-                        </label>
-
-                        {/* Live Voice Input Controls */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <select
-                            value={voiceLanguage}
-                            onChange={(e) => setVoiceLanguage(e.target.value)}
-                            disabled={isRecordingVoice}
-                            style={{
-                              fontSize: "11px",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              border: "1px solid #CBD5E1",
-                              background: "#FFF",
-                              color: "#334155",
-                              cursor: "pointer"
-                            }}
-                            title="Select speech language"
-                          >
-                            <option value="hi-IN">🇮🇳 हिन्दी (Hindi)</option>
-                            <option value="en-IN">🇬🇧 English</option>
-                          </select>
-
-                          <button
-                            type="button"
-                            onClick={handleToggleVoiceRecording}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              padding: "4px 10px",
-                              borderRadius: "6px",
-                              fontSize: "12px",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              border: isRecordingVoice ? "1px solid #E11D48" : "1px solid #CBD5E1",
-                              background: isRecordingVoice ? "#FFE4E6" : "#F8FAFC",
-                              color: isRecordingVoice ? "#BE123C" : "#0F172A",
-                              transition: "all 0.2s"
-                            }}
-                            title="Click to speak and transcribe description automatically"
-                          >
-                            {isRecordingVoice ? (
-                              <>
-                                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#E11D48", animation: "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite" }} />
-                                <MicOff size={13} color="#BE123C" />
-                                <span>Stop Recording</span>
-                              </>
-                            ) : (
-                              <>
-                                <Mic size={13} color="#002B49" />
-                                <span>Speak (बोलकर लिखें)</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {isRecordingVoice && (
-                        <div style={{ padding: "8px 12px", background: "#FFF1F2", border: "1px dashed #FDA4AF", borderRadius: "6px", marginBottom: "8px", fontSize: "12px", color: "#9F1239", display: "flex", alignItems: "center", gap: "8px" }}>
-                          <Mic size={14} className="animate-pulse text-red-600" />
-                          <span><strong>Listening...</strong> Speak clearly in {voiceLanguage === "hi-IN" ? "Hindi (हिन्दी)" : "English"}. Your speech will be transcribed in real time.</span>
-                        </div>
-                      )}
-
+                      <label className="gov-form-label">
+                        <span>Problem Description (समस्या का पूरा विवरण) *</span>
+                        <span className="label-sub-tag" style={{ color: "#E11D48", fontWeight: 700 }}>* Mandatory • Multilingual NLP</span>
+                      </label>
                       <textarea
                         className="gov-textarea"
                         rows={3}
                         required
-                        placeholder="Describe the defect (e.g. Deep pothole causing accidents near metro pillar 42, sparking 11kV transformer, stormwater drain overflow, garbage dump on road) or click 'Speak' above..."
+                        placeholder="Describe the defect (e.g. Deep pothole causing accidents near metro pillar 42, sparking 11kV transformer, stormwater drain overflow, garbage dump on road)..."
                         value={formDescription}
                         onChange={(e) => {
                           setFormDescription(e.target.value);
@@ -1586,31 +1459,15 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       <span>GOVERNMENT OF UTTAR PRADESH • OFFICIAL ACKNOWLEDGEMENT SLIP</span>
                       <span>DATE: {new Date().toLocaleDateString("en-IN")}</span>
                     </div>
-                    
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "20px", alignItems: "center" }}>
-                      <div className="receipt-grid">
-                        <div><span className="r-label">Grievance Ref ID:</span> <strong style={{ color: "#002B49" }}>{generatedRefId}</strong></div>
-                        <div><span className="r-label">Complainant:</span> <strong>{currentUser?.name || "Ananya Sharma"}</strong></div>
-                        <div><span className="r-label">Identified Category:</span> <strong>{confirmedCategory}</strong></div>
-                        <div><span className="r-label">Nodal Department:</span> <strong>{confirmedDepartment}</strong></div>
-                        <div><span className="r-label">Designated Officer:</span> <strong>{confirmedOfficer}</strong></div>
-                        <div><span className="r-label">Priority / Mandated SLA:</span> <strong className="text-saffron"><Clock size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />{confirmedSeverity.toUpperCase()} ({confirmedSla})</strong></div>
-                        <div><span className="r-label">GPS Geotag:</span> <span><MapPin size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />{formGps}</span></div>
-                        <div><span className="r-label">Designated Ward:</span> <span>{formWard}</span></div>
-                      </div>
-
-                      {/* Official Digital Verification QR Code Card */}
-                      <div style={{ background: "#FFF", border: "1px solid #CBD5E1", borderRadius: "8px", padding: "12px", textAlign: "center", minWidth: "120px" }}>
-                        <div style={{ background: "#0F172A", color: "#FFF", padding: "8px", borderRadius: "6px", display: "inline-block", marginBottom: "6px" }}>
-                          <QrCode size={52} />
-                        </div>
-                        <div style={{ fontSize: "10px", fontWeight: 700, color: "#002B49", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                          Official QR Seal
-                        </div>
-                        <div style={{ fontSize: "9px", color: "#64748B" }}>
-                          Scan to verify on IN-PACT
-                        </div>
-                      </div>
+                    <div className="receipt-grid">
+                      <div><span className="r-label">Grievance Ref ID:</span> <strong style={{ color: "#002B49" }}>{generatedRefId}</strong></div>
+                      <div><span className="r-label">Complainant:</span> <strong>{currentUser?.name || "Ananya Sharma"}</strong></div>
+                      <div><span className="r-label">Identified Category:</span> <strong>{confirmedCategory}</strong></div>
+                      <div><span className="r-label">Nodal Department:</span> <strong>{confirmedDepartment}</strong></div>
+                      <div><span className="r-label">Designated Officer:</span> <strong>{confirmedOfficer}</strong></div>
+                      <div><span className="r-label">Priority / Mandated SLA:</span> <strong className="text-saffron"><Clock size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />{confirmedSeverity.toUpperCase()} ({confirmedSla})</strong></div>
+                      <div><span className="r-label">GPS Geotag:</span> <span><MapPin size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />{formGps}</span></div>
+                      <div><span className="r-label">Designated Ward:</span> <span>{formWard}</span></div>
                     </div>
                   </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Home, User, Landmark, Search, PhoneCall, Menu, X, FileText, Users, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { Home, User, Landmark, Search, PhoneCall, Menu, X, FileText, Users, ShieldCheck } from "lucide-react";
 import { NationalEmblem } from "./GovEmblem";
 import inpactLogo from "../assets/inpact-icon.svg";
 import UserMenu from "./UserMenu";
@@ -124,20 +124,20 @@ export default function Navbar({ currentPage, navigateTo, currentUser, onLogout 
               <button
                 className={`portal-toggle-btn ${currentPage === "citizen-dashboard" ? "active-citizen" : ""}`}
                 onClick={() => handleNavClick("citizen-dashboard")}
-                title="Switch to Citizen Persona: Ananya Sharma (File & Track Grievances)"
+                title="Open Citizen Grievance Portal"
               >
-                <User size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} /> Citizen
+                Citizen
               </button>
               <button
                 className={`portal-toggle-btn ${currentPage === "gov-dashboard" ? "active-gov" : ""}`}
                 onClick={() => handleNavClick("gov-dashboard")}
-                title="Switch to Officer Persona: Er. S.K. Sharma / Dr. Rajesh Mehta (Triage & SLAs)"
+                title="Open Officer Triage Console"
               >
-                <Landmark size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} /> Officer
+                Officer
               </button>
             </div>
 
-            <div className="helpline-pill hide-mobile" title="GNIDA 24x7 Citizen Helpline">
+            <div className="helpline-pill hide-mobile">
               <PhoneCall size={12} className="inline mr-1 text-amber-700" />
               <span>1913</span>
             </div>
