@@ -50,8 +50,8 @@ How can I help you today? You can ask me how to **file a grievance**, **track a 
   }, [isOpen]);
 
   const quickPrompts = [
+    "Track RN20260920A8091",
     "How to lodge a grievance?",
-    "Track my complaint status",
     "What are the SLA timelines?",
     "Nodal officer directory",
     "24x7 Emergency Helplines"
@@ -72,7 +72,7 @@ How can I help you today? You can ask me how to **file a grievance**, **track a 
     setIsLoading(true);
 
     try {
-      // Send conversation to Groq API
+      // Send conversation to Groq API / Nagrik AI service
       const aiReply = await sendNagrikAIMessage(
         updatedMessages.map(m => ({ role: m.role, content: m.content }))
       );
@@ -100,7 +100,7 @@ How can I help you today? You can ask me how to **file a grievance**, **track a 
     setMessages([
       {
         role: "assistant",
-        content: `Chat history cleared. I am **Nagrik AI**, ready to assist you with the IN-PACT portal. What would you like to know?`,
+        content: `Chat history cleared. I am **Nagrik AI**, ready to assist you with the IN-PACT portal. You can give me your complaint Reference Number (e.g. \`RN20260920A8091\`) anytime to view live tracking details!`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
@@ -126,6 +126,22 @@ How can I help you today? You can ask me how to **file a grievance**, **track a 
 
       if (line.startsWith("### ")) {
         return <h4 key={idx} className="chat-msg-heading" dangerouslySetInnerHTML={{ __html: parsed.replace("### ", "") }} />;
+      }
+      if (line.startsWith("|")) {
+        if (line.includes("---")) {
+          return null; // Ignore markdown separator row
+        }
+        const parts = line.split("|").map(p => p.trim()).filter(Boolean);
+        if (parts.length >= 2) {
+          const key = parts[0].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+          const val = parts[1].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code class="chat-code-inline">$1</code>');
+          return (
+            <div key={idx} className="chat-table-key-row" style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", background: idx % 2 === 0 ? "rgba(241, 245, 249, 0.7)" : "transparent", borderRadius: "4px", fontSize: "12px", margin: "2px 0", gap: "8px" }}>
+              <span style={{ color: "#475569", flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: key }} />
+              <span style={{ color: "#0F172A", textAlign: "right", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: val }} />
+            </div>
+          );
+        }
       }
       if (line.startsWith("- ") || line.startsWith("* ")) {
         return (
