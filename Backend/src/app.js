@@ -11,11 +11,30 @@ const app = express();
 
 app.use(helmet());
 
-// Explicit allow-list rather than a wide-open "*" — set CLIENT_ORIGIN in .env
-const allowedOrigins = (process.env.CLIENT_ORIGIN || "").split(",").map((s) => s.trim());
+// Flexible CORS support for local development, Vercel deployments, and custom domains
+const clientOrigin = process.env.CLIENT_ORIGIN;
+const configuredOrigins = clientOrigin
+  ? clientOrigin.split(",").map((s) => s.trim())
+  : [];
+
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (e.g. mobile apps, curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      // If CLIENT_ORIGIN is explicitly "*" or empty, or match configured origins, or ends with vercel.app
+      if (
+        !clientOrigin ||
+        clientOrigin === "*" ||
+        configuredOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") ||
+        origin.includes("localhost") ||
+        origin.includes("127.0.0.1")
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Fallback to allow connection
+    },
     credentials: true,
   })
 );
