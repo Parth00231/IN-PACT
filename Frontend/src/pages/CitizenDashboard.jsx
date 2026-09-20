@@ -57,6 +57,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [formLocation, setFormLocation] = useState(currentUser?.address || "");
   const [formWard, setFormWard] = useState(currentUser?.ward || "Auto-detected Civic Zone");
   const [formGps, setFormGps] = useState("Auto-detecting GPS...");
+  const [isFetchingGps, setIsFetchingGps] = useState(false);
   const [locationAutoFetched, setLocationAutoFetched] = useState(false);
   const [exifLocationInfo, setExifLocationInfo] = useState(null); // { isExif: boolean, source: 'exif' | 'device', timestamp?: string }
 
