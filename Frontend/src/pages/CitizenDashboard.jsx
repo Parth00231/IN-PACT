@@ -89,10 +89,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   // Live Speech-to-Text Voice Complaint State
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState("hi-IN"); // "hi-IN" | "en-IN"
-  const [liveVoiceTranscript, setLiveVoiceTranscript] = useState("");
   const speechRecognitionRef = useRef(null);
-  const isRecordingVoiceRef = useRef(false);
-  const finalVoiceTranscriptRef = useRef("");
 
   // Citizen's personal tracked grievances — now fetched from the real backend
   const [myGrievances, setMyGrievances] = useState([]);
@@ -536,134 +533,57 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSimulateVoiceSample = (sampleText) => {
-    if (speechRecognitionRef.current) {
-      try { speechRecognitionRef.current.stop(); } catch (e) {}
-    }
-    setIsRecordingVoice(true);
-    isRecordingVoiceRef.current = true;
-    setFormError(null);
-    setLiveVoiceTranscript("");
-    setFormDescription("");
-    let charIndex = 0;
-    const interval = setInterval(() => {
-      charIndex += 2;
-      if (charIndex <= sampleText.length) {
-        const partial = sampleText.substring(0, charIndex);
-        setLiveVoiceTranscript(partial);
-        setFormDescription(partial);
-      } else {
-        setLiveVoiceTranscript(sampleText);
-        setFormDescription(sampleText);
-        clearInterval(interval);
-        setTimeout(() => {
-          setIsRecordingVoice(false);
-          isRecordingVoiceRef.current = false;
-        }, 600);
-      }
-    }, 35);
-  };
-
-  const stopVoiceRecording = () => {
-    isRecordingVoiceRef.current = false;
-    if (speechRecognitionRef.current) {
-      try {
-        speechRecognitionRef.current.onstart = null;
-        speechRecognitionRef.current.onresult = null;
-        speechRecognitionRef.current.onerror = null;
-        speechRecognitionRef.current.onend = null;
-        speechRecognitionRef.current.abort();
-      } catch (e) {}
-      speechRecognitionRef.current = null;
-    }
-    setIsRecordingVoice(false);
-  };
-
   const handleToggleVoiceRecording = () => {
     if (isRecordingVoice) {
-      stopVoiceRecording();
+      if (speechRecognitionRef.current) {
+        try { speechRecognitionRef.current.stop(); } catch (e) {}
+      }
+      setIsRecordingVoice(false);
       return;
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
     if (!SpeechRecognition) {
-      setFormError("Browser speech recognition is not supported on this browser/device. Please use Google Chrome, Safari, or Microsoft Edge, or click a Quick Voice Sample below.");
+      setFormError("Browser speech recognition is not supported on this device. Please type your description.");
       return;
     }
-
-    // Stop any existing instance
-    stopVoiceRecording();
 
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = voiceLanguage;
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-
-      // Retain already typed text as starting prefix so new voice appends cleanly
-      const initialText = formDescription.trim();
 
       recognition.onstart = () => {
         setIsRecordingVoice(true);
-        isRecordingVoiceRef.current = true;
-        setLiveVoiceTranscript("");
         setFormError(null);
       };
 
       recognition.onresult = (event) => {
-        let finalTranscript = "";
-        let interimTranscript = "";
-
+        let currentTranscript = "";
         for (let i = 0; i < event.results.length; i++) {
-          const textPiece = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += textPiece + " ";
-          } else {
-            interimTranscript += textPiece;
-          }
+          currentTranscript += event.results[i][0].transcript;
         }
-
-        const sessionSpoken = (finalTranscript + interimTranscript).trim();
-        const fullOutput = initialText ? `${initialText} ${sessionSpoken}` : sessionSpoken;
-
-        if (sessionSpoken) {
-          setLiveVoiceTranscript(sessionSpoken);
-          setFormDescription(fullOutput);
-          setFormError(null);
+        if (currentTranscript.trim()) {
+          setFormDescription(currentTranscript.trim());
         }
       };
 
       recognition.onerror = (event) => {
-        console.warn("Speech recognition event:", event.error);
-        if (event.error === "no-speech") {
-          return; // Keep listening patiently
-        }
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          setFormError("Microphone access was blocked. Please click the lock / settings icon in your browser address bar to allow microphone access, or use the 1-Click Voice Samples below.");
-        }
-        stopVoiceRecording();
+        console.warn("Speech recognition error:", event.error);
+        setIsRecordingVoice(false);
       };
 
       recognition.onend = () => {
-        if (isRecordingVoiceRef.current) {
-          try {
-            recognition.start();
-          } catch (e) {
-            stopVoiceRecording();
-          }
-        } else {
-          stopVoiceRecording();
-        }
+        setIsRecordingVoice(false);
       };
 
       speechRecognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.warn("Speech recognition initialization error:", err);
-      stopVoiceRecording();
-      setFormError("Could not start microphone: " + err.message);
+      console.warn("Could not start speech recognition:", err);
+      setIsRecordingVoice(false);
+      setFormError("Could not access microphone. Please check browser permissions.");
     }
   };
 
@@ -1233,48 +1153,9 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       </div>
 
                       {isRecordingVoice && (
-                        <div style={{
-                          padding: "10px 14px",
-                          background: "#FFF1F2",
-                          border: "1.5px solid #FDA4AF",
-                          borderRadius: "8px",
-                          marginBottom: "10px",
-                          fontSize: "12px",
-                          color: "#9F1239",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "6px"
-                        }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <span style={{ position: "relative", display: "flex", height: "10px", width: "10px" }}>
-                                <span style={{ animation: "ping 1s cubic-bezier(0, 0, 0.2, 1) infinite", position: "absolute", display: "inline-flex", height: "100%", width: "100%", borderRadius: "50%", background: "#E11D48", opacity: 0.75 }}></span>
-                                <span style={{ position: "relative", display: "inline-flex", borderRadius: "50%", height: "10px", width: "10px", background: "#BE123C" }}></span>
-                              </span>
-                              <strong>Listening ({voiceLanguage === "hi-IN" ? "हिन्दी / Hindi" : "English"})...</strong>
-                              <span style={{ color: "#881337", fontSize: "11px" }}>Speak into your microphone</span>
-                            </div>
-                            <span style={{ fontSize: "11px", fontWeight: 600, color: "#BE123C" }}>🔴 LIVE STREAM</span>
-                          </div>
-
-                          {liveVoiceTranscript ? (
-                            <div style={{
-                              background: "#FFE4E6",
-                              padding: "6px 10px",
-                              borderRadius: "6px",
-                              borderLeft: "3px solid #E11D48",
-                              color: "#881337",
-                              fontSize: "12px",
-                              fontWeight: 500,
-                              fontStyle: "italic"
-                            }}>
-                              “{liveVoiceTranscript}”
-                            </div>
-                          ) : (
-                            <div style={{ color: "#9F1239", fontSize: "11px", opacity: 0.85 }}>
-                              Waiting for your voice... (If nothing appears, make sure your browser has microphone permission enabled)
-                            </div>
-                          )}
+                        <div style={{ padding: "8px 12px", background: "#FFF1F2", border: "1px dashed #FDA4AF", borderRadius: "6px", marginBottom: "8px", fontSize: "12px", color: "#9F1239", display: "flex", alignItems: "center", gap: "8px" }}>
+                          <Mic size={14} className="animate-pulse text-red-600" />
+                          <span><strong>Listening...</strong> Speak clearly in {voiceLanguage === "hi-IN" ? "Hindi (हिन्दी)" : "English"}. Your speech will be transcribed in real time.</span>
                         </div>
                       )}
 
@@ -1289,32 +1170,6 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                           setFormError(null);
                         }}
                       />
-
-                      {/* Quick Voice Simulation Sample Chips */}
-                      <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", fontSize: "11px", color: "#64748B" }}>
-                        <span style={{ fontWeight: 600 }}>Quick Voice Samples:</span>
-                        <button
-                          type="button"
-                          onClick={() => handleSimulateVoiceSample("पारी चौक के पास गहरा गड्ढा है जिससे गाड़ियां टकरा रही हैं")}
-                          style={{ border: "1px solid #CBD5E1", background: "#F1F5F9", padding: "2px 8px", borderRadius: "12px", cursor: "pointer", color: "#1E293B", fontSize: "11px" }}
-                        >
-                          🇮🇳 "पारी चौक के पास गहरा गड्ढा है..."
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSimulateVoiceSample("High tension 11kV electrical cable sagging dangerously near residential gate in Alpha 1")}
-                          style={{ border: "1px solid #CBD5E1", background: "#F1F5F9", padding: "2px 8px", borderRadius: "12px", cursor: "pointer", color: "#1E293B", fontSize: "11px" }}
-                        >
-                          🇬🇧 "11kV electrical cable sagging..."
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSimulateVoiceSample("Main stormwater culvert drain clogged with garbage causing heavy waterlogging")}
-                          style={{ border: "1px solid #CBD5E1", background: "#F1F5F9", padding: "2px 8px", borderRadius: "12px", cursor: "pointer", color: "#1E293B", fontSize: "11px" }}
-                        >
-                          🇬🇧 "Culvert drain choked..."
-                        </button>
-                      </div>
                     </div>
 
                     {/* GPS Auto-Fetching Status Banner */}
