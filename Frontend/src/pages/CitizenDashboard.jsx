@@ -92,6 +92,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [liveVoiceTranscript, setLiveVoiceTranscript] = useState("");
   const speechRecognitionRef = useRef(null);
   const isRecordingVoiceRef = useRef(false);
+  const finalVoiceTranscriptRef = useRef("");
 
   // Citizen's personal tracked grievances — now fetched from the real backend
   const [myGrievances, setMyGrievances] = useState([]);
@@ -563,13 +564,37 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     }, 35);
   };
 
+  // Helper function to remove immediate duplicate words caused by interim speech stream repetitions
+  const cleanDuplicateWords = (text) => {
+    if (!text) return "";
+    const words = text.trim().split(/\s+/);
+    const result = [];
+    for (let i = 0; i < words.length; i++) {
+      if (i === 0 || words[i].toLowerCase() !== words[i - 1].toLowerCase()) {
+        result.push(words[i]);
+      }
+    }
+    return result.join(" ");
+  };
+
+  const stopVoiceRecording = () => {
+    isRecordingVoiceRef.current = false;
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.onstart = null;
+        speechRecognitionRef.current.onresult = null;
+        speechRecognitionRef.current.onerror = null;
+        speechRecognitionRef.current.onend = null;
+        speechRecognitionRef.current.abort();
+      } catch (e) {}
+      speechRecognitionRef.current = null;
+    }
+    setIsRecordingVoice(false);
+  };
+
   const handleToggleVoiceRecording = () => {
     if (isRecordingVoice) {
-      isRecordingVoiceRef.current = false;
-      if (speechRecognitionRef.current) {
-        try { speechRecognitionRef.current.stop(); } catch (e) {}
-      }
-      setIsRecordingVoice(false);
+      stopVoiceRecording();
       return;
     }
 
@@ -580,12 +605,18 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       return;
     }
 
+    // Stop any existing ghost instance before creating a new one
+    stopVoiceRecording();
+
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = voiceLanguage;
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
+
+      // Initialize base transcript from current description (if already typed) or empty
+      finalVoiceTranscriptRef.current = formDescription.trim();
 
       recognition.onstart = () => {
         setIsRecordingVoice(true);
@@ -596,15 +627,24 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
 
       recognition.onresult = (event) => {
         let interim = "";
-        let final = "";
-        for (let i = 0; i < event.results.length; i++) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const piece = event.results[i][0].transcript.trim();
           if (event.results[i].isFinal) {
-            final += event.results[i][0].transcript + " ";
+            if (piece) {
+              const currentFinal = finalVoiceTranscriptRef.current;
+              if (!currentFinal.toLowerCase().endsWith(piece.toLowerCase())) {
+                finalVoiceTranscriptRef.current = currentFinal ? `${currentFinal} ${piece}` : piece;
+              }
+            }
           } else {
-            interim += event.results[i][0].transcript + " ";
+            interim += piece + " ";
           }
         }
-        const combined = (final + interim).trim();
+
+        const base = finalVoiceTranscriptRef.current;
+        const currentInterim = interim.trim();
+        const combined = cleanDuplicateWords(base ? (currentInterim ? `${base} ${currentInterim}` : base) : currentInterim);
+
         if (combined) {
           setLiveVoiceTranscript(combined);
           setFormDescription(combined);
@@ -620,8 +660,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
           setFormError("Microphone access was blocked. Please click the lock / settings icon in your browser address bar to allow microphone access, or use the 1-Click Voice Samples below.");
         }
-        setIsRecordingVoice(false);
-        isRecordingVoiceRef.current = false;
+        stopVoiceRecording();
       };
 
       recognition.onend = () => {
@@ -629,11 +668,10 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
           try {
             recognition.start();
           } catch (e) {
-            setIsRecordingVoice(false);
-            isRecordingVoiceRef.current = false;
+            stopVoiceRecording();
           }
         } else {
-          setIsRecordingVoice(false);
+          stopVoiceRecording();
         }
       };
 
@@ -641,8 +679,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       recognition.start();
     } catch (err) {
       console.warn("Speech recognition initialization error:", err);
-      setIsRecordingVoice(false);
-      isRecordingVoiceRef.current = false;
+      stopVoiceRecording();
       setFormError("Could not start microphone: " + err.message);
     }
   };
