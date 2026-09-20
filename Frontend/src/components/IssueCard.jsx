@@ -1,4 +1,5 @@
 import React from "react";
+import { MapPin, Clock, Sparkles, ThumbsUp, Building2, Layers } from "lucide-react";
 
 export default function IssueCard({
   issue,
@@ -56,7 +57,10 @@ export default function IssueCard({
           <span className={`badge-severity ${currentSeverity.class}`}>
             ● {currentSeverity.label}
           </span>
-          <span className="badge-dept">🏢 {department || "Auto-Routing"}</span>
+          <span className="badge-dept flex items-center gap-1">
+            <Building2 size={11} />
+            {department || "Auto-Routing"}
+          </span>
           <span className="badge-cat">{category}</span>
         </div>
 
@@ -78,38 +82,39 @@ export default function IssueCard({
       )}
 
       <div className="issue-meta">
-        <div className="meta-item">
-          <span className="meta-icon">📍</span>
+        <div className="meta-item flex items-center gap-1">
+          <MapPin size={12} className="text-slate-500" />
           <span className="meta-text">{locationText}</span>
         </div>
-        <div className="meta-item">
-          <span className="meta-icon">🕒</span>
+        <div className="meta-item flex items-center gap-1">
+          <Clock size={12} className="text-slate-500" />
           <span className="meta-text">{timestamp || "Just now"}</span>
         </div>
         {slaRemaining && (
-          <div className="meta-item sla-warning">
-            <span className="meta-icon">⏳</span>
+          <div className="meta-item sla-warning flex items-center gap-1">
+            <Clock size={12} className="text-amber-600" />
             <span className="meta-text">SLA: {slaRemaining}</span>
           </div>
         )}
       </div>
 
       <div className="issue-card-footer">
-        <div className="ai-trust-badge" title="AI Computer Vision & NLP Model Confidence">
-          <span className="sparkle">✨</span> AI Confidence: <strong>{aiConfidence}%</strong>
+        <div className="ai-trust-badge flex items-center gap-1" title="AI Computer Vision & NLP Model Confidence">
+          <Sparkles size={13} className="text-blue-600" /> AI Confidence: <strong>{aiConfidence}%</strong>
         </div>
 
         <div className="card-actions">
           {onUpvote && (
             <button
-              className={`upvote-btn ${hasUpvoted ? "voted" : ""}`}
+              className={`upvote-btn flex items-center gap-1 ${hasUpvoted ? "voted" : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onUpvote(id);
               }}
               title="Endorse this civic issue to increase priority"
             >
-              👍 <span>{upvotes}</span>
+              <ThumbsUp size={13} />
+              <span>{upvotes}</span>
             </button>
           )}
 

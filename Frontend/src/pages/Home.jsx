@@ -1,4 +1,23 @@
 import React, { useState } from "react";
+import {
+  FileText,
+  Search,
+  CheckCircle2,
+  Camera,
+  Mic,
+  Download,
+  Construction,
+  Droplets,
+  Zap,
+  Trash2,
+  Clock,
+  Check,
+  Building2,
+  TrafficCone,
+  Activity,
+  Layers,
+  Sparkles
+} from "lucide-react";
 import StatCard from "../components/StatCard";
 import MapView from "../components/MapView";
 
@@ -115,31 +134,10 @@ export default function Home({ navigateTo }) {
 
   return (
     <div className="gov-home-wrapper">
-      {/* 1. Official Government Announcement Ticker */}
-      <div className="gov-marquee-bar">
-        <div className="gov-container marquee-inner">
-          <span className="marquee-badge">
-            <span className="bell-icon">📢</span> LATEST NOTICES
-          </span>
-          <div className="marquee-content">
-            <span>
-              <strong>[URGENT SLA DIRECTIVE]</strong> District Magistrate mandates 100% geotagged photo verification for all municipal road and drainage repairs across Greater Noida wards. &bull; 
-              <strong>[MONSOON PREPAREDNESS]</strong> All culverts and stormwater drains under UP Jal Nigam undergoing 24x7 AI telemetry monitoring. &bull; 
-              <strong>[CITIZEN CHARTER]</strong> Citizens can track statutory SLA resolution and file second-appeal escalations via this portal.
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Official Government Hero Section */}
+      {/* Official Government Hero Section */}
       <section className="gov-hero-section">
         <div className="gov-container hero-grid">
           <div className="hero-text-col">
-            <div className="gov-official-tag">
-              <span className="gov-seal-icon">🇮🇳</span>
-              <span>SMART CITIES MISSION • NATIONAL GRIEVANCE REDRESSAL SYSTEM</span>
-            </div>
-
             <h1 className="hero-main-title">
               National Public Grievance & Civic Action Portal
             </h1>
@@ -156,7 +154,7 @@ export default function Home({ navigateTo }) {
                 className="gov-btn-primary-lg"
                 onClick={() => navigateTo("citizen-dashboard")}
               >
-                <span className="btn-icon">📝</span> Lodge a Grievance (शिकायत दर्ज करें)
+                <FileText size={18} className="btn-icon" /> Lodge a Grievance (शिकायत दर्ज करें)
               </button>
 
               <button
@@ -165,21 +163,21 @@ export default function Home({ navigateTo }) {
                   document.getElementById("tracker-section")?.scrollIntoView({ behavior: "smooth" });
                 }}
               >
-                <span className="btn-icon">🔍</span> Track Grievance Status
+                <Search size={18} className="btn-icon" /> Track Grievance Status
               </button>
             </div>
 
             <div className="gov-compliance-strip">
               <div className="compliance-item">
-                <span className="check-bullet">✓</span>
+                <Check size={14} className="check-bullet text-green-600" />
                 <span>Statutory SLA Tracking</span>
               </div>
               <div className="compliance-item">
-                <span className="check-bullet">✓</span>
+                <Check size={14} className="check-bullet text-green-600" />
                 <span>Geotagged Photo Proof</span>
               </div>
               <div className="compliance-item">
-                <span className="check-bullet">✓</span>
+                <Check size={14} className="check-bullet text-green-600" />
                 <span>Citizen Verification Loop</span>
               </div>
             </div>
@@ -190,7 +188,9 @@ export default function Home({ navigateTo }) {
             <div className="gov-card quick-tracker-card">
               <div className="tracker-card-header">
                 <div className="tracker-title-group">
-                  <span className="tracker-icon">🔎</span>
+                  <div className="tracker-icon p-2 bg-blue-50 rounded-lg text-blue-900 inline-flex">
+                    <Search size={20} />
+                  </div>
                   <div>
                     <h3>Track Grievance / Application</h3>
                     <p>Enter your Grievance Reference ID (e.g. UP-GND-2026-8091)</p>
@@ -246,14 +246,14 @@ export default function Home({ navigateTo }) {
               <div className="tracker-quick-links">
                 <span className="quick-label">Citizen Quick Services:</span>
                 <div className="quick-badges-row">
-                  <button onClick={() => navigateTo("citizen-dashboard")} className="quick-chip">
-                    📸 Photo Grievance
+                  <button onClick={() => navigateTo("citizen-dashboard")} className="quick-chip flex items-center gap-1">
+                    <Camera size={13} /> Photo Grievance
                   </button>
-                  <button onClick={() => navigateTo("citizen-dashboard")} className="quick-chip">
-                    🎙️ Voice Complaint
+                  <button onClick={() => navigateTo("citizen-dashboard")} className="quick-chip flex items-center gap-1">
+                    <Mic size={13} /> Voice Complaint
                   </button>
-                  <button onClick={() => navigateTo("citizen-dashboard")} className="quick-chip">
-                    📋 Download Receipt
+                  <button onClick={() => navigateTo("citizen-dashboard")} className="quick-chip flex items-center gap-1">
+                    <Download size={13} /> Download Receipt
                   </button>
                 </div>
               </div>
@@ -276,28 +276,36 @@ export default function Home({ navigateTo }) {
 
           <div className="services-grid-4">
             <div className="service-portal-card" onClick={() => navigateTo("citizen-dashboard")}>
-              <div className="service-card-icon roads-icon">🛣️</div>
+              <div className="service-card-icon roads-icon p-2.5 bg-slate-100 rounded-lg text-slate-800 inline-flex w-fit">
+                <Construction size={22} />
+              </div>
               <h3>Roads & Pavements</h3>
               <p>Pothole repair, bitumen cave-ins, sidewalk obstructions, and street trenching.</p>
               <span className="service-sla-tag">SLA: 6 to 48 Hours</span>
             </div>
 
             <div className="service-portal-card" onClick={() => navigateTo("citizen-dashboard")}>
-              <div className="service-card-icon water-icon">💧</div>
+              <div className="service-card-icon water-icon p-2.5 bg-blue-50 rounded-lg text-blue-700 inline-flex w-fit">
+                <Droplets size={22} />
+              </div>
               <h3>Water Supply & Drainage</h3>
               <p>Pipeline burst, low water pressure, contaminated supply, and stormwater drain clogging.</p>
               <span className="service-sla-tag">SLA: 4 to 24 Hours</span>
             </div>
 
             <div className="service-portal-card" onClick={() => navigateTo("citizen-dashboard")}>
-              <div className="service-card-icon power-icon">⚡</div>
+              <div className="service-card-icon power-icon p-2.5 bg-amber-50 rounded-lg text-amber-600 inline-flex w-fit">
+                <Zap size={22} />
+              </div>
               <h3>Electricity & Streetlights</h3>
               <p>Transformer sparking, overhead cable hazards, non-functional streetlights, and power fluctuation.</p>
               <span className="service-sla-tag">SLA: 2 to 12 Hours</span>
             </div>
 
             <div className="service-portal-card" onClick={() => navigateTo("citizen-dashboard")}>
-              <div className="service-card-icon waste-icon">🗑️</div>
+              <div className="service-card-icon waste-icon p-2.5 bg-emerald-50 rounded-lg text-emerald-700 inline-flex w-fit">
+                <Trash2 size={22} />
+              </div>
               <h3>Solid Waste & Sanitation</h3>
               <p>Garbage overflow, illegal dumping, public bio-waste clearance, and fogging/sanitation.</p>
               <span className="service-sla-tag">SLA: 12 to 24 Hours</span>
@@ -323,7 +331,7 @@ export default function Home({ navigateTo }) {
               title="Total Grievances Registered"
               value="14,820"
               subtitle="Registered across all municipal wards"
-              icon="📋"
+              icon={<FileText size={22} className="text-blue-900" />}
               trend="100% digital audit trail"
               trendPositive={true}
             />
@@ -331,7 +339,7 @@ export default function Home({ navigateTo }) {
               title="Grievances Resolved & Verified"
               value="14,198"
               subtitle="Verified with photo evidence"
-              icon="✅"
+              icon={<CheckCircle2 size={22} className="text-emerald-700" />}
               trend="95.8% Resolution Rate"
               trendPositive={true}
               variant="success"
@@ -340,7 +348,7 @@ export default function Home({ navigateTo }) {
               title="Average Resolution Turnaround"
               value="2.8 Days"
               subtitle="Statutory compliance time"
-              icon="⏱️"
+              icon={<Clock size={22} className="text-purple-700" />}
               trend="68% faster than benchmark"
               trendPositive={true}
               variant="purple"
@@ -349,7 +357,7 @@ export default function Home({ navigateTo }) {
               title="Automated Routing Precision"
               value="98.4%"
               subtitle="First-time nodal assignment"
-              icon="🎯"
+              icon={<Sparkles size={22} className="text-amber-600" />}
               trend="Zero manual delay"
               trendPositive={true}
               variant="warning"
@@ -437,7 +445,9 @@ export default function Home({ navigateTo }) {
                     </div>
                     <div className="res-row">
                       <span className="res-k">Mandated Redressal SLA:</span>
-                      <strong className="res-v text-saffron">⏳ {demoResult.sla}</strong>
+                      <strong className="res-v text-saffron flex items-center gap-1">
+                        <Clock size={14} /> {demoResult.sla}
+                      </strong>
                     </div>
                   </div>
                 )}
@@ -489,7 +499,9 @@ export default function Home({ navigateTo }) {
           <div className="process-timeline-grid">
             <div className="process-step-card">
               <div className="step-badge-number">1</div>
-              <div className="step-icon-box">📝</div>
+              <div className="step-icon-box p-2 bg-blue-50 rounded text-blue-900 inline-flex mb-2">
+                <FileText size={20} />
+              </div>
               <h4>1. Multi-Modal Registration</h4>
               <p>Citizen logs complaint via mobile, web, photo upload, or regional voice recording with GPS location.</p>
               <div className="step-footer-info">Instant SMS / Reference ID</div>
@@ -497,7 +509,9 @@ export default function Home({ navigateTo }) {
 
             <div className="process-step-card">
               <div className="step-badge-number">2</div>
-              <div className="step-icon-box">⚖️</div>
+              <div className="step-icon-box p-2 bg-purple-50 rounded text-purple-900 inline-flex mb-2">
+                <Layers size={20} />
+              </div>
               <h4>2. Automated Jurisdictional Triage</h4>
               <p>System automatically verifies ward boundaries, classifies defect severity, and allocates statutory Nodal Officer.</p>
               <div className="step-footer-info">SLA Timer Commences</div>
@@ -505,7 +519,9 @@ export default function Home({ navigateTo }) {
 
             <div className="process-step-card">
               <div className="step-badge-number">3</div>
-              <div className="step-icon-box">🚜</div>
+              <div className="step-icon-box p-2 bg-amber-50 rounded text-amber-800 inline-flex mb-2">
+                <Activity size={20} />
+              </div>
               <h4>3. Field Inspection & Execution</h4>
               <p>Designated Executive Engineer deploys maintenance squad. Repairs completed and before/after photos uploaded.</p>
               <div className="step-footer-info">Geotagged Proof Mandatory</div>
@@ -513,7 +529,9 @@ export default function Home({ navigateTo }) {
 
             <div className="process-step-card">
               <div className="step-badge-number">4</div>
-              <div className="step-icon-box">🏛️</div>
+              <div className="step-icon-box p-2 bg-emerald-50 rounded text-emerald-800 inline-flex mb-2">
+                <CheckCircle2 size={20} />
+              </div>
               <h4>4. Citizen Feedback & Closure</h4>
               <p>Citizen confirms resolution. If unsatisfied, one-click escalation triggers review by the District Magistrate.</p>
               <div className="step-footer-info">Closed-Loop Accountability</div>
@@ -602,7 +620,9 @@ export default function Home({ navigateTo }) {
 
           <div className="directory-grid-5">
             <div className="dept-card">
-              <div className="dept-emblem">🛣️</div>
+              <div className="dept-emblem p-2 bg-slate-100 rounded text-slate-800 inline-flex mb-2">
+                <Construction size={18} />
+              </div>
               <h4>Public Works Department</h4>
               <p className="dept-juris">Roads, Bridges & Pavements</p>
               <div className="dept-contact">
@@ -612,7 +632,9 @@ export default function Home({ navigateTo }) {
             </div>
 
             <div className="dept-card">
-              <div className="dept-emblem">💧</div>
+              <div className="dept-emblem p-2 bg-blue-50 rounded text-blue-700 inline-flex mb-2">
+                <Droplets size={18} />
+              </div>
               <h4>UP Jal Nigam</h4>
               <p className="dept-juris">Drinking Water & Storm Drainage</p>
               <div className="dept-contact">
@@ -622,7 +644,9 @@ export default function Home({ navigateTo }) {
             </div>
 
             <div className="dept-card">
-              <div className="dept-emblem">⚡</div>
+              <div className="dept-emblem p-2 bg-amber-50 rounded text-amber-600 inline-flex mb-2">
+                <Zap size={18} />
+              </div>
               <h4>NPCL State Power</h4>
               <p className="dept-juris">Grid Safety & Street Lighting</p>
               <div className="dept-contact">
@@ -632,7 +656,9 @@ export default function Home({ navigateTo }) {
             </div>
 
             <div className="dept-card">
-              <div className="dept-emblem">🗑️</div>
+              <div className="dept-emblem p-2 bg-emerald-50 rounded text-emerald-700 inline-flex mb-2">
+                <Trash2 size={18} />
+              </div>
               <h4>GNIDA Sanitation</h4>
               <p className="dept-juris">Waste Management & Public Health</p>
               <div className="dept-contact">
@@ -642,7 +668,9 @@ export default function Home({ navigateTo }) {
             </div>
 
             <div className="dept-card">
-              <div className="dept-emblem">🚦</div>
+              <div className="dept-emblem p-2 bg-red-50 rounded text-red-600 inline-flex mb-2">
+                <TrafficCone size={18} />
+              </div>
               <h4>Traffic & Mobility Cell</h4>
               <p className="dept-juris">Signal Faults & Road Encroachment</p>
               <div className="dept-contact">

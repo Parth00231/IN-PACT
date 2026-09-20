@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { MapPin, Layers, Flame, X, AlertTriangle, Construction, Droplets, Zap } from "lucide-react";
 
 export default function MapView({
   issues = [],
@@ -122,7 +123,7 @@ export default function MapView({
     <div className="map-view-container">
       {/* Map Control Toolbar */}
       <div className="map-toolbar">
-        <div className="map-city-badge">
+        <div className="map-city-badge flex items-center gap-1.5">
           <span className="pulse-dot-green"></span>
           <strong>{city} GIS Grid</strong>
           <span className="zone-count">{filteredMarkers.length} Active Incidents</span>
@@ -139,40 +140,40 @@ export default function MapView({
             className={`map-filter-btn ${activeFilter === "critical" ? "active" : ""}`}
             onClick={() => setActiveFilter("critical")}
           >
-            🚨 Critical Only
+            Critical Only
           </button>
           <button
             className={`map-filter-btn ${activeFilter === "roads" ? "active" : ""}`}
             onClick={() => setActiveFilter("roads")}
           >
-            🛣️ Roads
+            Roads
           </button>
           <button
             className={`map-filter-btn ${activeFilter === "water" ? "active" : ""}`}
             onClick={() => setActiveFilter("water")}
           >
-            💧 Water & Drain
+            Water & Drain
           </button>
           <button
             className={`map-filter-btn ${activeFilter === "power" ? "active" : ""}`}
             onClick={() => setActiveFilter("power")}
           >
-            ⚡ Power
+            Power
           </button>
         </div>
 
         <div className="map-toggle-view">
           <button
-            className={`toggle-btn ${viewMode === "pins" ? "active" : ""}`}
+            className={`toggle-btn flex items-center gap-1 ${viewMode === "pins" ? "active" : ""}`}
             onClick={() => setViewMode("pins")}
           >
-            📍 Markers
+            <MapPin size={13} /> Markers
           </button>
           <button
-            className={`toggle-btn ${viewMode === "heatmap" ? "active" : ""}`}
+            className={`toggle-btn flex items-center gap-1 ${viewMode === "heatmap" ? "active" : ""}`}
             onClick={() => setViewMode("heatmap")}
           >
-            🔥 Heatmap
+            <Flame size={13} /> Heatmap
           </button>
         </div>
       </div>
@@ -236,13 +237,15 @@ export default function MapView({
               <span className={`popup-severity ${selectedPin.severity}`}>
                 {selectedPin.severity?.toUpperCase()} PRIORITY
               </span>
-              <button className="popup-close-btn" onClick={() => setSelectedPin(null)}>✕</button>
+              <button className="popup-close-btn" onClick={() => setSelectedPin(null)}>
+                <X size={14} />
+              </button>
             </div>
             <h5 className="popup-title">{selectedPin.title}</h5>
             <div className="popup-meta">
-              <span>📍 {selectedPin.zone || selectedPin.location}</span>
-              <span>🏢 {selectedPin.department}</span>
-              <span>👥 {selectedPin.reports || 1} Reports</span>
+              <span>{selectedPin.zone || selectedPin.location}</span>
+              <span>{selectedPin.department}</span>
+              <span>{selectedPin.reports || 1} Reports</span>
             </div>
             <div className="popup-actions">
               <button

@@ -90,28 +90,28 @@ export const CIVIC_PRESETS = [
 export const INVALID_IMAGE_PRESETS = [
   {
     id: "wrong_image_selfie",
-    title: "⚠️ Test Wrong Image (Selfie / Portrait)",
+    title: "Test Wrong Image (Selfie / Portrait)",
     sampleText: "My selfie photo taken today.",
     imagePreview: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
     reason: "Selfie / Person portrait instead of civic infrastructure defect"
   },
   {
     id: "wrong_image_screenshot",
-    title: "⚠️ Test Wrong Image (Screenshot / UI Graphic)",
+    title: "Test Wrong Image (Screenshot / UI Graphic)",
     sampleText: "Pothole on main road causing accidents.",
     imagePreview: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
     reason: "Screenshot / Digital UI graphic instead of real civic defect photo"
   },
   {
     id: "wrong_image_pet",
-    title: "⚠️ Test Wrong Image (Pet / Animal)",
+    title: "Test Wrong Image (Pet / Animal)",
     sampleText: "Pothole on road near my house.",
     imagePreview: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80",
     reason: "Animal / Pet photo instead of civic grievance defect"
   },
   {
     id: "wrong_image_food",
-    title: "⚠️ Test Wrong Image (Food / Dish)",
+    title: "Test Wrong Image (Food / Dish)",
     sampleText: "Pothole and road damage in sector.",
     imagePreview: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80",
     reason: "Food / Restaurant photo instead of municipal problem"
@@ -434,12 +434,12 @@ function localAnalyzeCivicIssue({
       rejectionReason: invalidPreset?.reason || "Irrelevant / Non-Civic Image Detected",
       guidance: "The uploaded photograph does not match recognized municipal defect visual features (damaged asphalt, road craters, leaking water, broken streetlight, or garbage dump). Even if the text is valid, a clear photo of the actual civic issue is required.",
       suggestedExamples: [
-        "📸 Pothole / crater on main sector road",
-        "📸 Overflowing garbage dump & solid waste",
-        "📸 Broken street light fixture or dark spot",
-        "📸 Exposed live wire or sparking transformer",
-        "📸 Blocked drainage / waterlogging after rain",
-        "📸 Drinking water supply pipe burst & leakage"
+        "Pothole / crater on main sector road",
+        "Overflowing garbage dump & solid waste",
+        "Broken street light fixture or dark spot",
+        "Exposed live wire or sparking transformer",
+        "Blocked drainage / waterlogging after rain",
+        "Drinking water supply pipe burst & leakage"
       ]
     };
   }
@@ -452,12 +452,12 @@ function localAnalyzeCivicIssue({
       rejectionReason: imageInspection.reason || "Irrelevant / Non-Civic Image Detected",
       guidance: "Our AI computer vision detected that the uploaded photo is not a valid civic defect (screenshot, personal photo, selfie, pet, or flat graphic detected). Even if the problem description is valid, please upload or click a real photo of the actual damaged road, water leak, garbage dump, or streetlight.",
       suggestedExamples: [
-        "📸 Pothole / crater on main sector road",
-        "📸 Overflowing municipal garbage vat or waste dump",
-        "📸 Leaking drinking water supply pipeline",
-        "📸 Non-functional street lights on sector avenue",
-        "📸 Exposed 11kV electrical wire or transformer",
-        "📸 Clogged stormwater drain and waterlogging"
+        "Pothole / crater on main sector road",
+        "Overflowing municipal garbage vat or waste dump",
+        "Leaking drinking water supply pipeline",
+        "Non-functional street lights on sector avenue",
+        "Exposed 11kV electrical wire or transformer",
+        "Clogged stormwater drain and waterlogging"
       ]
     };
   }
@@ -705,12 +705,12 @@ export async function analyzeCivicIssue({
       rejectionReason: invalidPreset?.reason || "Irrelevant / Non-Civic Image Detected",
       guidance: "The uploaded photograph does not match recognized municipal defect visual features (damaged asphalt, road craters, leaking water, broken streetlight, or garbage dump). Even if the text is valid, a clear photo of the actual civic issue is required.",
       suggestedExamples: [
-        "📸 Pothole / crater on main sector road",
-        "📸 Overflowing garbage dump & solid waste",
-        "📸 Broken street light fixture or dark spot",
-        "📸 Exposed live wire or sparking transformer",
-        "📸 Blocked drainage / waterlogging after rain",
-        "📸 Drinking water supply pipe burst & leakage"
+        "Pothole / crater on main sector road",
+        "Overflowing garbage dump & solid waste",
+        "Broken street light fixture or dark spot",
+        "Exposed live wire or sparking transformer",
+        "Blocked drainage / waterlogging after rain",
+        "Drinking water supply pipe burst & leakage"
       ]
     };
   }
@@ -723,12 +723,12 @@ export async function analyzeCivicIssue({
       rejectionReason: imageInspection.reason || "Irrelevant / Non-Civic Image Detected",
       guidance: "Our AI computer vision detected that the uploaded photo is not a valid civic defect (screenshot, personal photo, selfie, pet, or flat graphic detected). Even if the problem description is valid, please upload or click a real photo of the actual damaged road, water leak, garbage dump, or streetlight.",
       suggestedExamples: [
-        "📸 Pothole / crater on main sector road",
-        "📸 Overflowing municipal garbage vat or waste dump",
-        "📸 Leaking drinking water supply pipeline",
-        "📸 Non-functional street lights on sector avenue",
-        "📸 Exposed 11kV electrical wire or transformer",
-        "📸 Clogged stormwater drain and waterlogging"
+        "Pothole / crater on main sector road",
+        "Overflowing municipal garbage vat or waste dump",
+        "Leaking drinking water supply pipeline",
+        "Non-functional street lights on sector avenue",
+        "Exposed 11kV electrical wire or transformer",
+        "Clogged stormwater drain and waterlogging"
       ]
     };
   }

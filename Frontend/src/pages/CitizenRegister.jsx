@@ -1,16 +1,16 @@
 import React, { useState } from "react";
+import { Lock, RefreshCw, CheckCircle2, ShieldCheck, FileText, PhoneCall, Sparkles, UserPlus } from "lucide-react";
 import { NationalEmblem } from "../components/GovEmblem";
 import { register } from "../services/authService";
 
 const POPULAR_WARDS = [
   "Ward 12, Knowledge Park III, Greater Noida",
   "Ward 5, Sector Alpha 1, Greater Noida",
-  "Ward 9, Delta 2 Metropolis, Greater Noida",
-  "Ward 1, Pari Chowk & Commercial Belt",
-  "Ward 15, Sector Gamma 2, Greater Noida",
-  "Ward 18, Sector Beta 1, Greater Noida",
-  "Ward 22, Ecotech Extension, Greater Noida",
-  "Ward 27, Surajpur Industrial Area",
+  "Ward 8, Sector Beta 2, Greater Noida",
+  "Ward 9, Sector Delta 2, Greater Noida",
+  "Ward 3, Sector Gamma 1, Greater Noida",
+  "Ward 14, Pari Chowk Metro Belt, Greater Noida",
+  "Ward 16, Ecotech Industrial Zone, Greater Noida",
   "Other / Custom Locality",
 ];
 
@@ -18,22 +18,20 @@ export default function CitizenRegister({ onLogin, navigateTo }) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
-    ward: POPULAR_WARDS[0],
-    customWard: "",
     password: "",
     confirmPassword: "",
+    ward: POPULAR_WARDS[0],
+    customWard: "",
+    phone: "",
+    termsAgreed: true,
   });
 
+  const [captchaCode, setCaptchaCode] = useState("K9X4M");
+  const [captchaInput, setCaptchaInput] = useState("K9X4M");
   const [showPassword, setShowPassword] = useState(false);
-  const [termsAgreed, setTermsAgreed] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  // Captcha state
-  const [captchaCode, setCaptchaCode] = useState("K4M8X");
-  const [captchaInput, setCaptchaInput] = useState("K4M8X");
 
   const refreshCaptcha = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -45,25 +43,27 @@ export default function CitizenRegister({ onLogin, navigateTo }) {
     setCaptchaInput("");
   };
 
-  const calculatePasswordStrength = (pass) => {
-    if (!pass) return { score: 0, label: "None", color: "#cbd5e1" };
-    let score = 0;
-    if (pass.length >= 8) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
-    if (/[0-9]/.test(pass)) score += 1;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
-
-    if (score <= 1) return { score: 1, label: "Weak", color: "#ef4444" };
-    if (score === 2 || score === 3) return { score: 2, label: "Moderate", color: "#f59e0b" };
-    return { score: 3, label: "Strong", color: "#10b981" };
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
-  const strength = calculatePasswordStrength(formData.password);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) setError(null);
+  // Quick live demo pre-fill
+  const fillSampleCitizen = (sampleName, sampleWard, sampleEmail) => {
+    setFormData({
+      name: sampleName,
+      email: sampleEmail,
+      password: "Password@123",
+      confirmPassword: "Password@123",
+      ward: sampleWard,
+      customWard: "",
+      phone: "98765" + Math.floor(10000 + Math.random() * 90000),
+      termsAgreed: true,
+    });
+    setError(null);
   };
 
   const handleRegister = async (e) => {
@@ -71,83 +71,90 @@ export default function CitizenRegister({ onLogin, navigateTo }) {
     setError(null);
     setSuccessMsg(null);
 
-    // Validation checks
+    // Validation
     if (!formData.name.trim()) {
-      setError("Please enter your full legal name.");
+      setError("Please enter your full legal name as per government ID.");
       return;
     }
+
     if (!formData.email.trim()) {
-      setError("Please enter a valid email address.");
+      setError("Please provide a valid email address.");
       return;
     }
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+
+    if (!formData.password || formData.password.length < 8) {
+      setError("Password must contain at least 8 characters.");
       return;
     }
+
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match. Please re-enter.");
+      setError("Passwords do not match. Please re-enter identical passwords.");
       return;
     }
+
     if (captchaInput.trim().toUpperCase() !== captchaCode.trim().toUpperCase()) {
-      setError("Security Captcha verification failed. Please check the code.");
+      setError("Security Captcha verification failed. Please enter the correct code.");
       refreshCaptcha();
       return;
     }
-    if (!termsAgreed) {
-      setError("Please agree to the Citizen Charter & Terms of Service to proceed.");
+
+    if (!formData.termsAgreed) {
+      setError("You must agree to the Statutory Grievance Declaration & Citizen Charter terms.");
       return;
     }
 
-    setLoading(true);
-    const effectiveWard =
+    const resolvedWard =
       formData.ward === "Other / Custom Locality"
-        ? formData.customWard || "Greater Noida Metropolis"
+        ? formData.customWard.trim() || "Greater Noida Metropolis"
         : formData.ward;
 
+    setLoading(true);
     try {
-      const user = await register({
+      const result = await register({
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
-        phone: formData.phone ? `+91 ${formData.phone.replace(/\D/g, "")}` : "",
-        ward: effectiveWard,
+        ward: resolvedWard,
+        phone: formData.phone.trim() || undefined,
       });
 
-      setSuccessMsg("Registration successful! Redirecting to Citizen Dashboard...");
+      setSuccessMsg("Account successfully registered under UP Public Services Delivery System.");
       setTimeout(() => {
-        onLogin(user);
-        navigateTo("citizen-dashboard");
+        onLogin(result.user);
       }, 700);
     } catch (err) {
-      setError(err.message || "Failed to register account. Please try again.");
+      setError(err.message || "Registration failed. Please verify your details.");
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickFillPreset = (presetName, presetWard, presetEmail, presetPhone) => {
-    setFormData({
-      name: presetName,
-      email: presetEmail,
-      phone: presetPhone,
-      ward: presetWard,
-      customWard: "",
-      password: "Password@123",
-      confirmPassword: "Password@123",
-    });
-    setCaptchaInput(captchaCode);
-    setError(null);
+  // Password Strength Evaluator
+  const getPasswordStrength = (pass) => {
+    if (!pass) return { score: 0, label: "None", color: "#CBD5E1" };
+    let s = 0;
+    if (pass.length >= 8) s++;
+    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) s++;
+    if (/\d/.test(pass) || /[^A-Za-z0-9]/.test(pass)) s++;
+    if (s === 1) return { score: 1, label: "Basic", color: "#EF4444" };
+    if (s === 2) return { score: 2, label: "Medium", color: "#F59E0B" };
+    return { score: 3, label: "Strong", color: "#10B981" };
   };
 
+  const strength = getPasswordStrength(formData.password);
+
   return (
-    <div className="gov-auth-wrapper">
-      {/* Top back ribbon */}
-      <div className="gov-auth-top-bar">
-        <div className="gov-container auth-top-inner">
-          <button className="gov-auth-back-btn" onClick={() => navigateTo("home")}>
-            ← Return to National Portal Home
-          </button>
-          <div className="auth-cert-seal">
-            🔒 256-Bit SSL Encrypted • MeitY & NIC e-Governance Compliant
+    <div className="gov-auth-container">
+      {/* Official Government Top Security Header */}
+      <div className="gov-security-banner">
+        <div className="gov-container security-banner-inner flex items-center justify-between">
+          <div className="security-tag flex items-center gap-1.5">
+            <Lock size={14} className="lock-icon" />
+            <span>OFFICIAL CITIZEN REGISTRATION PORTAL • JANHIT GUARANTEE ACT</span>
+          </div>
+          <div className="security-encryption flex items-center gap-1">
+            <ShieldCheck size={14} />
+            <span>256-Bit SSL Encrypted • MeitY & NIC e-Governance Compliant</span>
           </div>
         </div>
       </div>
@@ -323,9 +330,9 @@ export default function CitizenRegister({ onLogin, navigateTo }) {
                   {formData.confirmPassword && (
                     <span className="match-status">
                       {formData.password === formData.confirmPassword ? (
-                        <span className="text-match-ok">✓ Passwords match</span>
+                        <span className="text-match-ok"> Passwords match</span>
                       ) : (
-                        <span className="text-match-no">✕ Passwords do not match</span>
+                        <span className="text-match-no"> Passwords do not match</span>
                       )}
                     </span>
                   )}
@@ -346,128 +353,131 @@ export default function CitizenRegister({ onLogin, navigateTo }) {
                   onClick={refreshCaptcha}
                   title="Refresh Captcha"
                 >
-                  🔄
+                  <RefreshCw size={14} />
                 </button>
                 <input
                   type="text"
-                  className="gov-input captcha-input"
-                  placeholder="Enter code"
+                  placeholder="Enter 5-digit code"
                   value={captchaInput}
                   onChange={(e) => setCaptchaInput(e.target.value)}
+                  className="gov-input captcha-input"
+                  maxLength={5}
                   required
                 />
               </div>
             </div>
 
-            {/* Terms & Consent Checkbox */}
-            <div className="gov-checkbox-group" style={{ margin: "14px 0" }}>
-              <label className="gov-checkbox-label">
+            {/* Statutory Declaration Checkbox */}
+            <div className="statutory-declaration-box">
+              <label className="declaration-label">
                 <input
                   type="checkbox"
-                  checked={termsAgreed}
-                  onChange={(e) => setTermsAgreed(e.target.checked)}
+                  name="termsAgreed"
+                  checked={formData.termsAgreed}
+                  onChange={handleChange}
                 />
                 <span>
-                  I declare that the provided information is true, and agree to the{" "}
-                  <strong>Digital India Citizen Charter</strong> &amp;{" "}
-                  <strong>UP Janhit Guarantee Act terms</strong>.
+                  I declare that I am a resident/commuter of Greater Noida metropolis and all information furnished is authentic. I agree to receive statutory grievance notifications and SLA audit SMS as per the Uttar Pradesh Janhit Guarantee Act.
                 </span>
               </label>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit Action */}
             <button
               type="submit"
-              className="gov-btn-primary-block"
+              className="gov-btn-primary-block flex items-center justify-center gap-2"
               disabled={loading}
+              style={{ marginTop: "18px" }}
             >
-              {loading ? "Creating Citizen Account..." : "Create Citizen Account (पंजीकरण पूर्ण करें) →"}
+              <UserPlus size={16} />
+              {loading ? "Registering Citizen Profile..." : "Create Citizen Account (पंजीकरण पूर्ण करें) →"}
             </button>
           </form>
 
-          {/* Bottom Switcher */}
-          <div className="auth-switch-prompt auth-switch-bottom-box">
-            <span>Already have an IN-PACT citizen account?</span>
-            <button
-              type="button"
-              className="auth-switch-link"
-              onClick={() => navigateTo("citizen-login")}
-            >
-              Sign in to your account (लॉगिन करें) →
-            </button>
-          </div>
-
-          {/* Fast Evaluation Fill Presets */}
-          <div className="gov-demo-profile-box">
-            <span className="demo-box-label">QUICK EVALUATION REGISTRATION PRESETS:</span>
+          {/* Quick Pre-fill Evaluation Chips */}
+          <div className="gov-demo-profile-box" style={{ marginTop: "20px" }}>
+            <span className="demo-box-label">QUICK EVALUATION SAMPLE CITIZEN PROFILES:</span>
             <div className="demo-chips-grid">
               <button
                 type="button"
                 className="gov-demo-chip"
                 onClick={() =>
-                  handleQuickFillPreset(
-                    "Pooja Kashyap",
+                  fillSampleCitizen(
+                    "Ramesh Kumar Verma",
                     "Ward 12, Knowledge Park III, Greater Noida",
-                    `pooja.${Math.floor(100 + Math.random() * 900)}@example.com`,
-                    "9876501234"
+                    "ramesh.verma@example.com"
                   )
                 }
               >
-                📝 Pooja Kashyap (Knowledge Park)
+                Ramesh Verma (KP-3)
               </button>
               <button
                 type="button"
                 className="gov-demo-chip"
                 onClick={() =>
-                  handleQuickFillPreset(
-                    "Aditya Narayan",
+                  fillSampleCitizen(
+                    "Pooja Deshmukh",
                     "Ward 5, Sector Alpha 1, Greater Noida",
-                    `aditya.${Math.floor(100 + Math.random() * 900)}@example.com`,
-                    "9811244556"
+                    "pooja.deshmukh@example.com"
                   )
                 }
               >
-                📝 Aditya Narayan (Sector Alpha)
+                Pooja Deshmukh (Alpha-1)
+              </button>
+              <button
+                type="button"
+                className="gov-demo-chip"
+                onClick={() =>
+                  fillSampleCitizen(
+                    "Amitabh Kashyap",
+                    "Ward 9, Sector Delta 2, Greater Noida",
+                    "amitabh.k@example.com"
+                  )
+                }
+              >
+                Amitabh K. (Delta-2)
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right: Citizen Benefits & Help Information */}
+        {/* Right: Citizen Rights & Legal Guarantees */}
         <div className="gov-auth-info-col">
           <div className="gov-card auth-info-card">
-            <div className="info-card-header">
-              <span className="info-icon">✨</span>
-              <h3>Citizen Account Benefits</h3>
+            <div className="info-card-header flex items-center gap-2">
+              <div className="p-2 bg-blue-50 text-blue-900 rounded-lg">
+                <ShieldCheck size={20} />
+              </div>
+              <h3>Guaranteed Citizen Grievance Rights</h3>
             </div>
             <ul className="info-points-list">
               <li>
-                <strong>Instant Grievance Ingestion:</strong> Report road craters, waterlogging, streetlights, sanitation, and electrical faults with geo-tagging and photographic proof.
+                <strong>Statutory Right to Redressal:</strong> Every grievance filed through this portal is assigned a legally binding SLA under the UP Janhit Guarantee Act.
               </li>
               <li>
-                <strong>Predictive Triage & Direct Officer Assignment:</strong> Automated allocation directly to Municipal Executive Engineers without manual desk backlogs.
+                <strong>Automated AI Jurisdiction Triaging:</strong> AI computer vision & NLP allocate issues directly to Executive Engineers without administrative desk delays.
               </li>
               <li>
-                <strong>Real-Time SMS & Dashboard Updates:</strong> Track resolution milestones step-by-step from inspection to field completion.
+                <strong>Mandatory Photographic Evidence:</strong> Field maintenance squads must upload geotagged before/after photos prior to mark completion.
               </li>
               <li>
-                <strong>Statutory Janhit Guarantee Protection:</strong> Cases adhere to legally binding time-bounds with escalation to the District Magistrate.
+                <strong>Closed-Loop Citizen Verification:</strong> Issues are not marked resolved until citizen gives satisfaction feedback.
               </li>
             </ul>
 
             <div className="official-helpline-box">
-              <h4>Citizen Registration Support</h4>
+              <h4>Citizen Support Helplines</h4>
               <div className="helpline-row">
-                <span>📞 Toll-Free Helpline:</span>
-                <strong>1800-180-0101 / 1913</strong>
+                <span>Greater Noida Municipal Helpline:</span>
+                <strong>0120-2326101</strong>
               </div>
               <div className="helpline-row">
-                <span>✉️ Registration Support:</span>
-                <strong>pg-cell@gnida.in</strong>
+                <span>All-India Civic Emergency:</span>
+                <strong>1913 / 112</strong>
               </div>
               <div className="helpline-row">
-                <span>🏛️ Municipal HQ:</span>
-                <strong>Plot 01, Knowledge Park IV, Greater Noida</strong>
+                <span>Technical Support Desk:</span>
+                <strong>portal-admin@in-pact.gov.in</strong>
               </div>
             </div>
           </div>

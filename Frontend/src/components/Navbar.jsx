@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Home, User, Landmark, Search, PhoneCall, Menu, X } from "lucide-react";
 import { NationalEmblem } from "./GovEmblem";
 import inpactLogo from "../assets/inpact-icon.svg";
 import UserMenu from "./UserMenu";
@@ -77,21 +78,21 @@ export default function Navbar({ currentPage, navigateTo, currentUser, onLogout 
               className={`nav-pill ${currentPage === "home" ? "active" : ""}`}
               onClick={() => handleNavClick("home")}
             >
-              <span className="nav-icon">🏠</span> Home
+              <Home size={14} className="nav-icon" /> Home
             </button>
 
             <button
               className={`nav-pill ${currentPage === "citizen-dashboard" ? "active" : ""}`}
               onClick={() => handleNavClick("citizen-dashboard")}
             >
-              <span className="nav-icon">👤</span> Citizen Portal
+              <User size={14} className="nav-icon" /> Citizen Portal
             </button>
 
             <button
               className={`nav-pill ${currentPage === "gov-dashboard" ? "active" : ""}`}
               onClick={() => handleNavClick("gov-dashboard")}
             >
-              <span className="nav-icon">🏛️</span> Officer Console
+              <Landmark size={14} className="nav-icon" /> Officer Console
             </button>
 
             <button
@@ -104,7 +105,7 @@ export default function Navbar({ currentPage, navigateTo, currentUser, onLogout 
                 }, 100);
               }}
             >
-              <span className="nav-icon">🔍</span> Track
+              <Search size={14} className="nav-icon" /> Track
             </button>
 
             <button
@@ -154,7 +155,7 @@ export default function Navbar({ currentPage, navigateTo, currentUser, onLogout 
             </div>
 
             <div className="helpline-pill hide-mobile">
-              <span className="helpline-dot"></span>
+              <PhoneCall size={12} className="inline mr-1 text-amber-700" />
               <span>1913</span>
             </div>
 
@@ -164,7 +165,7 @@ export default function Navbar({ currentPage, navigateTo, currentUser, onLogout 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
             >
-              <span>{mobileMenuOpen ? "✕" : "☰"}</span>
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </div>

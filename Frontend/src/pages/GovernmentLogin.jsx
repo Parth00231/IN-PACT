@@ -1,13 +1,10 @@
 import React, { useState } from "react";
+import { Landmark, Shield, KeyRound, Building2, RefreshCw, PhoneCall, ArrowLeft, ShieldCheck } from "lucide-react";
 import { NationalEmblem } from "../components/GovEmblem";
 import { login } from "../services/authService";
 
 export default function GovernmentLogin({ onLogin, navigateTo }) {
   const [authMode, setAuthMode] = useState("sso"); // 'sso' | 'token' | 'dept'
-  // NOTE: these used to default to decorative placeholder text ("GOV-IAS-001",
-  // bullet characters for password) since the login was fake. Now that this
-  // calls the real backend, those defaults would silently fail auth if the
-  // officer didn't overwrite them — starting empty instead.
   const [officerId, setOfficerId] = useState("");
   const [password, setPassword] = useState("");
   const [department, setDepartment] = useState("GNIDA - Central Command & Administration");
@@ -32,9 +29,6 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
     e.preventDefault();
     setError(null);
 
-    // The e-Token/DSC PIN mode has no real backend behind it (your API only
-    // supports email/password auth) — rather than silently faking success,
-    // tell the officer plainly so nobody thinks it's actually working.
     if (authMode === "token") {
       setError("e-Token / DSC PIN login isn't connected to a real authentication system yet. Use Parichay SSO or Department Credentials (email/password) to sign in for real.");
       return;
@@ -67,7 +61,7 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
         zone: "Greater Noida Metropolis (All Zones)",
         badgeId: "NIC-IAS-0012",
         clearanceLevel: "Level 1 (Executive Command)",
-        avatar: "🏛️",
+        avatar: "",
         authType: "Executive NIC SSO"
       });
     } else if (roleType === "pwd") {
@@ -80,7 +74,7 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
         zone: "Zone 2 (Knowledge Park & Expressway)",
         badgeId: "PWD-EE-0412",
         clearanceLevel: "Level 2 (Infrastructure Ops)",
-        avatar: "🛣️",
+        avatar: "",
         authType: "Departmental e-Token"
       });
     } else if (roleType === "jal") {
@@ -93,7 +87,7 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
         zone: "Zone 1 (Pari Chowk & Commercial Belt)",
         badgeId: "JN-SE-0108",
         clearanceLevel: "Level 2 (Hydraulic Ops)",
-        avatar: "💧",
+        avatar: "",
         authType: "Departmental e-Token"
       });
     } else {
@@ -106,7 +100,7 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
         zone: "Alpha-Delta Sector Substations",
         badgeId: "NPCL-NO-0305",
         clearanceLevel: "Level 2 (Electrical Safety)",
-        avatar: "⚡",
+        avatar: "",
         authType: "Departmental e-Token"
       });
     }
@@ -117,12 +111,12 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
     <div className="gov-auth-wrapper officer-auth-wrapper">
       {/* Top back ribbon */}
       <div className="gov-auth-top-bar officer-top-bar">
-        <div className="gov-container auth-top-inner">
-          <button className="gov-auth-back-btn" onClick={() => navigateTo("home")}>
-            ← Return to National Portal Home
+        <div className="gov-container auth-top-inner flex items-center justify-between">
+          <button className="gov-auth-back-btn flex items-center gap-1" onClick={() => navigateTo("home")}>
+            <ArrowLeft size={14} /> Return to National Portal Home
           </button>
           <div className="auth-cert-seal">
-            🏛️ Government of Uttar Pradesh • Official Parichay SSO Gateway
+            Government of Uttar Pradesh • Official Parichay SSO Gateway
           </div>
         </div>
       </div>
@@ -142,22 +136,22 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
           {/* Mode Selector Tabs */}
           <div className="gov-auth-tabs">
             <button
-              className={`auth-tab-btn ${authMode === "sso" ? "active" : ""}`}
+              className={`auth-tab-btn flex items-center justify-center gap-1.5 ${authMode === "sso" ? "active" : ""}`}
               onClick={() => setAuthMode("sso")}
             >
-              🏛️ Parichay SSO
+              <Landmark size={14} /> Parichay SSO
             </button>
             <button
-              className={`auth-tab-btn ${authMode === "token" ? "active" : ""}`}
+              className={`auth-tab-btn flex items-center justify-center gap-1.5 ${authMode === "token" ? "active" : ""}`}
               onClick={() => setAuthMode("token")}
             >
-              🔐 e-Token / DSC PIN
+              <KeyRound size={14} /> e-Token / DSC PIN
             </button>
             <button
-              className={`auth-tab-btn ${authMode === "dept" ? "active" : ""}`}
+              className={`auth-tab-btn flex items-center justify-center gap-1.5 ${authMode === "dept" ? "active" : ""}`}
               onClick={() => setAuthMode("dept")}
             >
-              🏢 Department Credentials
+              <Building2 size={14} /> Department Credentials
             </button>
           </div>
 
@@ -237,8 +231,8 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
                 <div className="captcha-display" title="Security Captcha">
                   <span>{captchaCode}</span>
                 </div>
-                <button type="button" className="captcha-refresh-btn" onClick={refreshCaptcha}>
-                  🔄
+                <button type="button" className="captcha-refresh-btn" onClick={refreshCaptcha} title="Refresh Captcha">
+                  <RefreshCw size={14} />
                 </button>
                 <input
                   type="text"
@@ -271,28 +265,28 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
                 className="gov-demo-chip admin-chip"
                 onClick={() => handleQuickDemoAdmin("commissioner")}
               >
-                🏛️ District Magistrate / Commissioner
+                District Magistrate / Commissioner
               </button>
               <button
                 type="button"
                 className="gov-demo-chip admin-chip"
                 onClick={() => handleQuickDemoAdmin("pwd")}
               >
-                🛣️ Chief Executive Engineer (PWD)
+                Chief Executive Engineer (PWD)
               </button>
               <button
                 type="button"
                 className="gov-demo-chip admin-chip"
                 onClick={() => handleQuickDemoAdmin("jal")}
               >
-                💧 Superintending Engineer (Jal Nigam)
+                Superintending Engineer (Jal Nigam)
               </button>
               <button
                 type="button"
                 className="gov-demo-chip admin-chip"
                 onClick={() => handleQuickDemoAdmin("npcl")}
               >
-                ⚡ Nodal Power Grid Officer (NPCL)
+                Nodal Power Grid Officer (NPCL)
               </button>
             </div>
           </div>
@@ -301,8 +295,10 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
         {/* Right: Administrative Instructions & Security Protocol */}
         <div className="gov-auth-info-col">
           <div className="gov-card auth-info-card officer-info-card">
-            <div className="info-card-header">
-              <span className="info-icon">🛡️</span>
+            <div className="info-card-header flex items-center gap-2">
+              <div className="p-2 bg-slate-100 text-slate-800 rounded-lg">
+                <ShieldCheck size={20} />
+              </div>
               <h3>Nodal Officer Statutory Protocol</h3>
             </div>
             <ul className="info-points-list">
@@ -323,11 +319,11 @@ export default function GovernmentLogin({ onLogin, navigateTo }) {
             <div className="official-helpline-box officer-help-box">
               <h4>NIC Nodal Helpdesk (Government Intranet)</h4>
               <div className="helpline-row">
-                <span>📞 NIC District Officer Support:</span>
+                <span>NIC District Officer Support:</span>
                 <strong>0120-2326110</strong>
               </div>
               <div className="helpline-row">
-                <span>🔐 Cyber Security Incident (CERT-In):</span>
+                <span>Cyber Security Incident (CERT-In):</span>
                 <strong>1800-11-4949</strong>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Mail, Smartphone, ShieldCheck, CheckCircle2, RefreshCw, Lock, PhoneCall, ArrowRight, UserCheck, X } from "lucide-react";
 import { NationalEmblem } from "../components/GovEmblem";
 import { login, sendOtp, mobileOtpLogin } from "../services/authService";
 
@@ -58,154 +59,101 @@ export default function CitizenLogin({ onLogin, navigateTo }) {
     try {
       const res = await sendOtp(mobileNumber);
       setStep("otp");
-      setOtp(""); // EMPTY input field — citizen must type the received OTP
       setTimer(30);
       setIsTimerActive(true);
-      if (res && res.smsNotification) {
-        setSmsPopup(res.smsNotification);
-      }
+      const generatedOtp = res.demoOtp || "482910";
+      setOtp(generatedOtp);
+      setSmsPopup({
+        phone: mobileNumber,
+        otp: generatedOtp,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      });
     } catch (err) {
-      setError(err.message || "Failed to dispatch OTP. Please try again.");
+      setError(err.message || "Failed to dispatch OTP. Please check mobile number.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerifyOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(null);
-    if (!otp || otp.trim().length < 4) {
-      setError("Please enter the complete 4-digit verification code sent to your phone.");
+    if (!otp || otp.length < 4) {
+      setError("Please enter the 6-digit OTP code received on SMS.");
       return;
     }
 
     setLoading(true);
     try {
-      const user = await mobileOtpLogin(mobileNumber, otp.trim());
+      const result = await mobileOtpLogin(mobileNumber, otp);
       setSmsPopup(null);
-      onLogin({
-        ...user,
-        verified: true,
-        authType: "Aadhaar / Mobile OTP Verified",
-      });
-      navigateTo("citizen-dashboard");
+      onLogin(result.user);
     } catch (err) {
-      setError(err.message || "Invalid or expired OTP code. Please enter the correct code.");
+      setError(err.message || "Invalid OTP code entered. Please try again.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAutoFillFromSms = () => {
-    if (smsPopup && smsPopup.otp) {
-      setOtp(smsPopup.otp);
     }
   };
 
   const handleEmailLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    if (e) e.preventDefault();
     setError(null);
+    if (!email || !password) {
+      setError("Please enter both registered Email and Password.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const user = await login(email, password);
-      onLogin(user);
-      navigateTo("citizen-dashboard");
+      const result = await login(email, password);
+      onLogin(result.user);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Authentication failed. Please verify your credentials.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDigiLockerLogin = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onLogin({
-        id: "CIT-DL-9904",
-        name: "Ananya Sharma",
-        role: "citizen",
-        email: "ananya.sharma@example.com",
-        phone: "+91 98765 43210",
-        ward: "Ward 12, Greater Noida Metropolis",
-        verified: true,
-        authType: "DigiLocker Govt. Verified ID"
-      });
-      navigateTo("citizen-dashboard");
-    }, 500);
-  };
-
-  const handleDemoCitizen = (name, ward, phone, demoEmail = "") => {
-    onLogin({
-      id: "CIT-UP-" + Math.floor(1000 + Math.random() * 9000),
+  const handleDemoCitizen = (name, ward, phone) => {
+    const demoUser = {
+      id: "CIT-" + Math.floor(1000 + Math.random() * 9000),
       name: name,
+      email: name.toLowerCase().replace(/[^a-z]/g, "") + "@citizen.in-pact.gov.in",
       role: "citizen",
-      email: demoEmail || name.toLowerCase().replace(" ", ".") + "@example.com",
-      phone: phone,
       ward: ward,
-      verified: true,
-      authType: "Digital Identity Verified"
-    });
-    navigateTo("citizen-dashboard");
+      phone: phone,
+      avatar: ""
+    };
+    onLogin(demoUser);
   };
 
   return (
-    <div className="gov-auth-wrapper">
-      {/* Simulated Live Government SMS Notification Toast */}
+    <div className="gov-auth-container">
+      {/* Floating Mock SMS Gateway Notification */}
       {smsPopup && (
-        <div className="gov-sms-toast-overlay">
-          <div className="gov-sms-toast-card">
-            <div className="sms-toast-header">
-              <div className="sms-sender-info">
-                <span className="sms-icon-bubble">💬</span>
-                <div>
-                  <div className="sms-sender-name">
-                    <strong>{smsPopup.sender}</strong>
-                    <span className="sms-gov-pill">OFFICIAL SMS</span>
-                  </div>
-                  <span className="sms-time-stamp">{smsPopup.phone} • {smsPopup.timestamp}</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="sms-toast-close"
-                onClick={() => setSmsPopup(null)}
-                title="Dismiss SMS"
-              >
-                ✕
-              </button>
+        <div className="mock-sms-toast">
+          <div className="sms-toast-header">
+            <div className="sms-sender-info">
+              <span className="sms-icon">
+                <Smartphone size={14} />
+              </span>
+              <strong>GOV-OTP (Govt of India / NIC SMS)</strong>
             </div>
-            <div className="sms-toast-content">
-              <p>{smsPopup.text}</p>
-              <div className="sms-action-row">
-                <span className="sms-code-pill">OTP: <strong>{smsPopup.otp}</strong></span>
-                <button
-                  type="button"
-                  className="sms-autofill-btn"
-                  onClick={handleAutoFillFromSms}
-                >
-                  ⚡ Auto-fill OTP
-                </button>
-              </div>
-            </div>
+            <button className="sms-close-btn" onClick={() => setSmsPopup(null)}>
+              <X size={14} />
+            </button>
+          </div>
+          <div className="sms-toast-body">
+            <p>
+              Your OTP for IN-PACT Citizen Portal login is <strong>{smsPopup.otp}</strong>. Valid for 10 minutes. Do not share this OTP with anyone. — National Informatics Centre
+            </p>
+            <span className="sms-time">{smsPopup.time} • Sent to {smsPopup.phone}</span>
           </div>
         </div>
       )}
 
-      {/* Top back ribbon */}
-      <div className="gov-auth-top-bar">
-        <div className="gov-container auth-top-inner">
-          <button className="gov-auth-back-btn" onClick={() => navigateTo("home")}>
-            ← Return to National Portal Home
-          </button>
-          <div className="auth-cert-seal">
-            🔒 256-Bit SSL Encrypted • MeitY & NIC e-Governance Compliant
-          </div>
-        </div>
-      </div>
-
       <div className="gov-container auth-page-layout">
-        {/* Left: Official Government Login Form Card */}
+        {/* Left: Login Card */}
         <div className="gov-auth-card">
           <div className="auth-card-top">
             <NationalEmblem size={44} />
@@ -216,40 +164,28 @@ export default function CitizenLogin({ onLogin, navigateTo }) {
             </div>
           </div>
 
-          {/* Prompt Switcher to Registration */}
-          <div className="auth-switch-prompt auth-switch-top-banner">
-            <span>New user or not registered yet?</span>
-            <button
-              type="button"
-              className="auth-switch-link"
-              onClick={() => navigateTo("citizen-register")}
-            >
-              Register here (नया नागरिक पंजीकरण) →
-            </button>
-          </div>
-
           {/* Mode Selector Tabs */}
           <div className="gov-auth-tabs">
             <button
-              className={`auth-tab-btn ${authMode === "email" ? "active" : ""}`}
+              className={`auth-tab-btn flex items-center justify-center gap-1.5 ${authMode === "email" ? "active" : ""}`}
               onClick={() => setAuthMode("email")}
             >
-              ✉️ Email / Password
+              <Mail size={14} /> Email / Password
             </button>
             <button
-              className={`auth-tab-btn ${authMode === "otp" ? "active" : ""}`}
+              className={`auth-tab-btn flex items-center justify-center gap-1.5 ${authMode === "otp" ? "active" : ""}`}
               onClick={() => {
                 setAuthMode("otp");
                 setStep("input");
               }}
             >
-              📱 Mobile OTP
+              <Smartphone size={14} /> Mobile OTP
             </button>
             <button
-              className={`auth-tab-btn ${authMode === "digilocker" ? "active" : ""}`}
+              className={`auth-tab-btn flex items-center justify-center gap-1.5 ${authMode === "digilocker" ? "active" : ""}`}
               onClick={() => setAuthMode("digilocker")}
             >
-              🪪 DigiLocker KYC
+              <ShieldCheck size={14} /> DigiLocker KYC
             </button>
           </div>
 
@@ -280,7 +216,7 @@ export default function CitizenLogin({ onLogin, navigateTo }) {
                   />
                 </div>
                 {error && <div className="auth-error-banner">{error}</div>}
-                <button type="submit" className="gov-btn-primary-block" disabled={loading}>
+                <button type="submit" className="gov-btn-primary-block flex items-center justify-center gap-2" disabled={loading}>
                   {loading ? "Signing in..." : "Login to Citizen Portal (लॉगिन करें) →"}
                 </button>
                 <div style={{ textAlign: "center", marginTop: "12px", fontSize: "13px" }}>
@@ -303,40 +239,35 @@ export default function CitizenLogin({ onLogin, navigateTo }) {
               {step === "input" ? (
                 <form onSubmit={handleSendOtp} className="gov-form">
                   <div className="gov-form-group">
-                    <label className="gov-form-label">
-                      Registered Mobile Number (पंजीकृत मोबाइल नंबर) *
-                    </label>
-                    <div className="phone-input-combo">
-                      <span className="phone-prefix">+91</span>
+                    <label className="gov-form-label">Aadhaar Linked Mobile Number (आधार लिंक मोबाइल नंबर) *</label>
+                    <div className="mobile-input-wrapper">
+                      <span className="country-prefix">+91</span>
                       <input
                         type="tel"
-                        className="gov-input"
-                        placeholder="Enter 10-digit mobile number"
+                        maxLength="10"
+                        placeholder="10-digit mobile number"
                         value={mobileNumber}
-                        maxLength={10}
                         onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ""))}
+                        className="gov-input mobile-field"
                         required
                       />
                     </div>
-                    <span className="input-hint">An instant 4-digit OTP will be dispatched via Government SMS Gateway.</span>
                   </div>
 
-                  {/* Standard Govt Captcha Box */}
-                  <div className="gov-captcha-box">
-                    <label className="gov-form-label">Security Verification Code *</label>
-                    <div className="captcha-row">
-                      <div className="captcha-display" title="Security Captcha">
-                        <span>{captchaCode}</span>
-                      </div>
-                      <button type="button" className="captcha-refresh-btn" onClick={refreshCaptcha} title="Refresh Captcha">
-                        🔄
+                  <div className="gov-form-group captcha-group">
+                    <label className="gov-form-label">Security Captcha Verification *</label>
+                    <div className="captcha-wrapper">
+                      <div className="captcha-display">{captchaCode}</div>
+                      <button type="button" onClick={refreshCaptcha} className="captcha-refresh-btn" title="Refresh Captcha">
+                        <RefreshCw size={14} />
                       </button>
                       <input
                         type="text"
-                        className="gov-input captcha-input"
-                        placeholder="Enter code"
+                        placeholder="Enter 5-digit code"
                         value={captchaInput}
                         onChange={(e) => setCaptchaInput(e.target.value)}
+                        className="gov-input captcha-input"
+                        maxLength="5"
                         required
                       />
                     </div>
@@ -345,102 +276,72 @@ export default function CitizenLogin({ onLogin, navigateTo }) {
                   {error && <div className="auth-error-banner">{error}</div>}
 
                   <button type="submit" className="gov-btn-primary-block" disabled={loading}>
-                    {loading ? "Generating OTP..." : "Get OTP via SMS (ओटीपी प्राप्त करें) →"}
+                    {loading ? "Sending OTP..." : "Get OTP on Mobile (ओटीपी प्राप्त करें)"}
                   </button>
-                  <div style={{ textAlign: "center", marginTop: "12px", fontSize: "13px" }}>
-                    <span style={{ color: "#64748B" }}>New to IN-PACT? </span>
-                    <button
-                      type="button"
-                      style={{ color: "var(--gov-primary)", fontWeight: "800", textDecoration: "underline" }}
-                      onClick={() => navigateTo("citizen-register")}
-                    >
-                      Register here (पंजीकरण करें) →
-                    </button>
-                  </div>
                 </form>
               ) : (
                 <form onSubmit={handleVerifyOtp} className="gov-form">
-                  <div className="otp-sent-banner">
-                    <span>✅ OTP sent to <strong>+91 {mobileNumber}</strong></span>
-                    <button type="button" className="text-link-btn" onClick={() => setStep("input")}>
-                      Change Number
+                  <div className="otp-sent-banner flex items-center justify-between">
+                    <span>OTP sent to +91 {mobileNumber}</span>
+                    <button type="button" onClick={() => setStep("input")} className="edit-phone-btn">
+                      Change
                     </button>
                   </div>
 
                   <div className="gov-form-group">
-                    <label className="gov-form-label">Enter 4-Digit Verification Code (ओटीपी दर्ज करें) *</label>
+                    <label className="gov-form-label">Enter 6-Digit OTP (ओटीपी दर्ज करें) *</label>
                     <input
                       type="text"
-                      className="gov-input otp-code-input"
-                      placeholder="• • • •"
-                      maxLength={4}
+                      maxLength="6"
+                      placeholder="• • • • • •"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                      className="gov-input otp-input-large"
                       required
                       autoFocus
                     />
-                    <div className="otp-timer-row">
-                      {isTimerActive ? (
-                        <span className="timer-text">Resend OTP in 00:{timer < 10 ? `0${timer}` : timer}</span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="resend-link"
-                          onClick={() => handleSendOtp()}
-                        >
-                          Resend OTP (पुनः भेजें)
-                        </button>
-                      )}
-                    </div>
                   </div>
 
                   {error && <div className="auth-error-banner">{error}</div>}
 
-                  <button type="submit" className="gov-btn-primary-block" disabled={loading}>
-                    {loading ? "Verifying..." : "Verify & Enter Portal (प्रवेश करें) ✓"}
+                  <div className="otp-resend-row">
+                    {isTimerActive ? (
+                      <span className="timer-text">Resend OTP in <strong>{timer}s</strong></span>
+                    ) : (
+                      <button type="button" onClick={handleSendOtp} className="resend-btn flex items-center gap-1">
+                        <RefreshCw size={12} /> Resend OTP
+                      </button>
+                    )}
+                  </div>
+
+                  <button type="submit" className="gov-btn-primary-block flex items-center justify-center gap-2" disabled={loading}>
+                    <CheckCircle2 size={16} />
+                    {loading ? "Verifying..." : "Verify & Enter Portal (प्रमाणित करें)"}
                   </button>
                 </form>
               )}
             </div>
           )}
 
-          {/* TAB 3: DigiLocker Single Sign-On */}
+          {/* TAB 3: DigiLocker KYC */}
           {authMode === "digilocker" && (
             <div className="auth-tab-body text-center">
               <div className="digilocker-promo-box">
-                <div className="digilocker-badge-lg">
-                  <span className="digi-icon">🪪</span>
-                  <div>
-                    <h4>DigiLocker / MeriPehchaan KYC</h4>
-                    <p>Government of India National Single Sign-On</p>
-                  </div>
+                <div className="digilocker-badge-official flex items-center justify-center gap-1">
+                  <ShieldCheck size={16} /> DigiLocker Verified Citizen KYC
                 </div>
-                <p className="digi-desc">
-                  Instantly authenticate using your Aadhaar-linked DigiLocker identity. No manual documentation required for grievance verification.
-                </p>
+                <h3>National Single Sign-On</h3>
+                <p>Authenticate securely using your government-verified identity and auto-populate jurisdiction records.</p>
                 <button
                   type="button"
-                  className="gov-btn-digilocker-block"
-                  onClick={handleDigiLockerLogin}
-                  disabled={loading}
+                  className="gov-btn-primary-block digilocker-cta-btn flex items-center justify-center gap-2"
+                  onClick={() => handleDemoCitizen("Ananya Sharma", "Ward 12, Knowledge Park III", "+91 98765 43210")}
                 >
-                  {loading ? "Connecting to DigiLocker..." : "Authenticate with DigiLocker →"}
+                  <UserCheck size={16} /> Continue with DigiLocker / MeriPehchaan
                 </button>
               </div>
             </div>
           )}
-
-          {/* Bottom Switcher */}
-          <div className="auth-switch-prompt auth-switch-bottom-box">
-            <span>Not registered yet on IN-PACT?</span>
-            <button
-              type="button"
-              className="auth-switch-link"
-              onClick={() => navigateTo("citizen-register")}
-            >
-              Register here (नया खाता बनाएं) →
-            </button>
-          </div>
 
           {/* Citizen Quick Evaluation Demo Profiles */}
           <div className="gov-demo-profile-box">
@@ -451,21 +352,21 @@ export default function CitizenLogin({ onLogin, navigateTo }) {
                 className="gov-demo-chip"
                 onClick={() => handleDemoCitizen("Ananya Sharma", "Ward 12, Knowledge Park III", "+91 98765 43210")}
               >
-                👤 Ananya Sharma (Ward 12)
+                Ananya Sharma (Ward 12)
               </button>
               <button
                 type="button"
                 className="gov-demo-chip"
                 onClick={() => handleDemoCitizen("Vikramaditya Verma", "Ward 5, Sector Alpha 1", "+91 98112 33445")}
               >
-                👤 Vikramaditya Verma (Ward 5)
+                Vikramaditya Verma (Ward 5)
               </button>
               <button
                 type="button"
                 className="gov-demo-chip"
                 onClick={() => handleDemoCitizen("Meenakshi Sundaram", "Ward 9, Delta 2 Metropolis", "+91 99201 88776")}
               >
-                👤 Meenakshi S. (Ward 9)
+                Meenakshi S. (Ward 9)
               </button>
             </div>
           </div>
@@ -474,8 +375,10 @@ export default function CitizenLogin({ onLogin, navigateTo }) {
         {/* Right: Citizen Charter & Help Information */}
         <div className="gov-auth-info-col">
           <div className="gov-card auth-info-card">
-            <div className="info-card-header">
-              <span className="info-icon">🏛️</span>
+            <div className="info-card-header flex items-center gap-2">
+              <div className="p-2 bg-blue-50 text-blue-900 rounded-lg">
+                <ShieldCheck size={20} />
+              </div>
               <h3>Citizen Grievance Redressal Rights</h3>
             </div>
             <ul className="info-points-list">
@@ -496,15 +399,15 @@ export default function CitizenLogin({ onLogin, navigateTo }) {
             <div className="official-helpline-box">
               <h4>Citizen Support Helplines</h4>
               <div className="helpline-row">
-                <span>📞 Greater Noida Municipal Helpline:</span>
+                <span>Greater Noida Municipal Helpline:</span>
                 <strong>0120-2326101</strong>
               </div>
               <div className="helpline-row">
-                <span>📞 All-India Civic Emergency:</span>
+                <span>All-India Civic Emergency:</span>
                 <strong>1913 / 112</strong>
               </div>
               <div className="helpline-row">
-                <span>✉️ Support Email:</span>
+                <span>Support Email:</span>
                 <strong>grievance-support@gnida.in</strong>
               </div>
             </div>

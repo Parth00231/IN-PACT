@@ -58,7 +58,7 @@ function App() {
         designation: "District Magistrate & Municipal Commissioner",
         department: "GNIDA - Central Command & Administration",
         zone: "Greater Noida Metropolis HQ",
-        avatar: "🏛️"
+        avatar: ""
       }
       : {
         id: "CIT-UP-8821",
@@ -67,7 +67,7 @@ function App() {
         email: "ananya.sharma@example.com",
         phone: "+91 98765 43210",
         ward: "Ward 12, Knowledge Park, Greater Noida",
-        avatar: "👩"
+        avatar: ""
       });
 
   return (
@@ -123,7 +123,7 @@ function App() {
                   </div>
                 </div>
                 <div className="pillar-item">
-                  <div className="pillar-seal">🏛️</div>
+                  <div className="pillar-seal"></div>
                   <div>
                     <h4>Government of Uttar Pradesh</h4>
                     <p>Greater Noida Industrial Development Authority (GNIDA)</p>
@@ -137,7 +137,7 @@ function App() {
                   </div>
                 </div>
                 <div className="pillar-item">
-                  <div className="pillar-seal">🔒</div>
+                  <div className="pillar-seal"></div>
                   <div>
                     <h4>National Informatics Centre (NIC)</h4>
                     <p>CERT-In Security Audited e-Governance Platform</p>
