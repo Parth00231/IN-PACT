@@ -41,7 +41,7 @@ import IssueCard from "../components/IssueCard";
 import MapView from "../components/MapView";
 import { getMyIssues, getIssues, createIssue, toggleUpvote, getStats } from "../services/issuesService";
 import { analyzeCivicIssue, CIVIC_PRESETS, INVALID_IMAGE_PRESETS } from "../services/aiClassifierService";
-import { getLiveDeviceLocation, getLocationForUploadedPhoto } from "../services/locationService";
+import { getLiveDeviceLocation } from "../services/locationService";
 import { generateReferenceNumber, saveGrievanceHistory } from "../utils/referenceNumber";
 
 export default function CitizenDashboard({ currentUser, navigateTo }) {
@@ -57,8 +57,8 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [formLocation, setFormLocation] = useState("Knowledge Park III, Main Arterial Road");
   const [formWard, setFormWard] = useState("Ward 12 - Knowledge Park III");
   const [formGps, setFormGps] = useState("28.4682° N, 77.5028° E (Live Geotag)");
+  const [isFetchingGps, setIsFetchingGps] = useState(false);
   const [locationAutoFetched, setLocationAutoFetched] = useState(false);
-  const [exifLocationInfo, setExifLocationInfo] = useState(null); // { isExif: boolean, source: 'exif' | 'device', timestamp?: string }
 
   // Live Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -441,28 +441,10 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     setCameraError(null);
   };
 
-  const triggerAutoLocationFetch = async (preferredAddress = null, preferredWard = null, imageFile = null) => {
+  const triggerAutoLocationFetch = async (preferredAddress = null, preferredWard = null) => {
     setIsFetchingGps(true);
     try {
-      let loc;
-      if (imageFile) {
-        // Extract embedded EXIF GPS tags from where the photo was originally clicked
-        loc = await getLocationForUploadedPhoto(imageFile);
-        setExifLocationInfo({
-          isExif: !!loc.isExifGeotag,
-          source: loc.source,
-          timestamp: loc.timestamp,
-        });
-      } else {
-        // Live device hardware GPS for real-time camera captures or manual re-fetch
-        loc = await getLiveDeviceLocation();
-        setExifLocationInfo({
-          isExif: false,
-          source: "device",
-          timestamp: loc.timestamp,
-        });
-      }
-
+      const loc = await getLiveDeviceLocation();
       setFormGps(loc.gpsString);
       if (preferredAddress) {
         setFormLocation(preferredAddress);
@@ -498,7 +480,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     setSelectedPresetId(null);
     setFormError(null);
     handleStopCamera();
-    // Live camera capture fetches real-time device location
+    // Auto-fetch real-time device location when camera photo is captured
     triggerAutoLocationFetch();
   };
 
@@ -520,8 +502,8 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       setFormError(null);
     };
     reader.readAsDataURL(file);
-    // Extract incident location from the photo's embedded EXIF GPS metadata
-    triggerAutoLocationFetch(null, null, file);
+    // Auto-fetch real-time GPS location when file is uploaded
+    triggerAutoLocationFetch();
   };
 
   const handleSelectPreset = (preset) => {
@@ -1078,15 +1060,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                           <label className="gov-form-label">
                             <span>Exact Location & Landmark (स्थान / लैंडमार्क) *</span>
                             {locationAutoFetched && (
-                              exifLocationInfo?.isExif ? (
-                                <span className="gps-auto-success-pill" style={{ background: "#ECFDF5", color: "#065F46", border: "1px solid #A7F3D0" }}>
-                                  <Camera size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> 📸 Photo EXIF Geotag (Incident Spot)
-                                </span>
-                              ) : (
-                                <span className="gps-auto-success-pill">
-                                  <CheckCircle2 size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> Device GPS Mapped
-                                </span>
-                              )
+                              <span className="gps-auto-success-pill"><CheckCircle2 size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> GPS Auto-Mapped</span>
                             )}
                           </label>
                           <button
