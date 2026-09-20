@@ -564,19 +564,6 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     }, 35);
   };
 
-  // Helper function to remove immediate duplicate words caused by interim speech stream repetitions
-  const cleanDuplicateWords = (text) => {
-    if (!text) return "";
-    const words = text.trim().split(/\s+/);
-    const result = [];
-    for (let i = 0; i < words.length; i++) {
-      if (i === 0 || words[i].toLowerCase() !== words[i - 1].toLowerCase()) {
-        result.push(words[i]);
-      }
-    }
-    return result.join(" ");
-  };
-
   const stopVoiceRecording = () => {
     isRecordingVoiceRef.current = false;
     if (speechRecognitionRef.current) {
@@ -605,7 +592,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       return;
     }
 
-    // Stop any existing ghost instance before creating a new one
+    // Stop any existing instance
     stopVoiceRecording();
 
     try {
@@ -615,8 +602,8 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
-      // Initialize base transcript from current description (if already typed) or empty
-      finalVoiceTranscriptRef.current = formDescription.trim();
+      // Retain already typed text as starting prefix so new voice appends cleanly
+      const initialText = formDescription.trim();
 
       recognition.onstart = () => {
         setIsRecordingVoice(true);
@@ -626,28 +613,24 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
       };
 
       recognition.onresult = (event) => {
-        let interim = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const piece = event.results[i][0].transcript.trim();
+        let finalTranscript = "";
+        let interimTranscript = "";
+
+        for (let i = 0; i < event.results.length; i++) {
+          const textPiece = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            if (piece) {
-              const currentFinal = finalVoiceTranscriptRef.current;
-              if (!currentFinal.toLowerCase().endsWith(piece.toLowerCase())) {
-                finalVoiceTranscriptRef.current = currentFinal ? `${currentFinal} ${piece}` : piece;
-              }
-            }
+            finalTranscript += textPiece + " ";
           } else {
-            interim += piece + " ";
+            interimTranscript += textPiece;
           }
         }
 
-        const base = finalVoiceTranscriptRef.current;
-        const currentInterim = interim.trim();
-        const combined = cleanDuplicateWords(base ? (currentInterim ? `${base} ${currentInterim}` : base) : currentInterim);
+        const sessionSpoken = (finalTranscript + interimTranscript).trim();
+        const fullOutput = initialText ? `${initialText} ${sessionSpoken}` : sessionSpoken;
 
-        if (combined) {
-          setLiveVoiceTranscript(combined);
-          setFormDescription(combined);
+        if (sessionSpoken) {
+          setLiveVoiceTranscript(sessionSpoken);
+          setFormDescription(fullOutput);
           setFormError(null);
         }
       };
