@@ -49,219 +49,126 @@ export default function Navbar({ currentPage, navigateTo, currentUser, onLogout 
 
   return (
     <header className="gov-header-wrapper">
+      {/* Sleek Tricolor Accent Strip */}
       <div className="gov-tricolor-bar">
         <div className="tri-saffron"></div>
         <div className="tri-white"></div>
         <div className="tri-green"></div>
       </div>
 
-      <div className="gov-utility-strip">
-        <div className="gov-container utility-inner">
-          <div className="utility-left">
-            <span className="gov-badge-official">
-              <span className="emblem-mini">🏛️</span> भारत सरकार | Govt. of India
-            </span>
-            <span className="utility-separator hide-mobile">|</span>
-            <span className="utility-state hide-mobile">उत्तर प्रदेश शासन (GNIDA)</span>
+      {/* Main Unified Header */}
+      <div className="gov-nav-unified">
+        <div className="gov-container nav-unified-inner">
+          {/* Brand Left */}
+          <div className="brand-unified" onClick={() => handleNavClick("home")} role="button" tabIndex={0}>
+            <img src={inpactLogo} alt="IN-PACT emblem" className="brand-logo-img" />
+            <div className="brand-titles">
+              <div className="brand-row-top">
+                <span className="brand-name">IN-PACT</span>
+                <span className="brand-tag">GOVT. OF INDIA</span>
+              </div>
+              <span className="brand-subtitle">Civic Action & Grievance Portal &bull; GNIDA</span>
+            </div>
           </div>
 
-          <div className="utility-right">
-            <div className="utility-helpline">
-              <span className="helpline-icon">📞</span>
-              <span>Helpline: <strong>1913</strong></span>
+          {/* Nav Links Center */}
+          <nav className={`nav-links-center ${mobileMenuOpen ? "mobile-open" : ""}`}>
+            <button
+              className={`nav-pill ${currentPage === "home" ? "active" : ""}`}
+              onClick={() => handleNavClick("home")}
+            >
+              <span className="nav-icon">🏠</span> Home
+            </button>
+
+            <button
+              className={`nav-pill ${currentPage === "citizen-dashboard" ? "active" : ""}`}
+              onClick={() => handleNavClick("citizen-dashboard")}
+            >
+              <span className="nav-icon">👤</span> Citizen Portal
+            </button>
+
+            <button
+              className={`nav-pill ${currentPage === "gov-dashboard" ? "active" : ""}`}
+              onClick={() => handleNavClick("gov-dashboard")}
+            >
+              <span className="nav-icon">🏛️</span> Officer Console
+            </button>
+
+            <button
+              className="nav-pill"
+              onClick={() => {
+                if (currentPage !== "home") navigateTo("home");
+                setMobileMenuOpen(false);
+                setTimeout(() => {
+                  document.getElementById("tracker-section")?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
+            >
+              <span className="nav-icon">🔍</span> Track
+            </button>
+
+            <button
+              className="nav-pill hide-tablet-link"
+              onClick={() => {
+                if (currentPage !== "home") navigateTo("home");
+                setMobileMenuOpen(false);
+                setTimeout(() => {
+                  document.getElementById("citizen-charter")?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
+            >
+              Charter
+            </button>
+
+            <button
+              className="nav-pill hide-tablet-link"
+              onClick={() => {
+                if (currentPage !== "home") navigateTo("home");
+                setMobileMenuOpen(false);
+                setTimeout(() => {
+                  document.getElementById("nodal-officers")?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
+            >
+              Nodal Directory
+            </button>
+          </nav>
+
+          {/* Quick Actions Right */}
+          <div className="nav-actions-right">
+            <div className="nav-portal-switch">
+              <button
+                className={`portal-toggle-btn ${currentPage === "citizen-dashboard" ? "active-citizen" : ""}`}
+                onClick={() => handleNavClick("citizen-dashboard")}
+                title="Open Citizen Grievance Portal"
+              >
+                Citizen
+              </button>
+              <button
+                className={`portal-toggle-btn ${currentPage === "gov-dashboard" ? "active-gov" : ""}`}
+                onClick={() => handleNavClick("gov-dashboard")}
+                title="Open Officer Triage Console"
+              >
+                Officer
+              </button>
             </div>
 
-            <span className="utility-separator">|</span>
-
-            <div className="accessibility-tools hide-mobile">
-              <button
-                className={`font-tool-btn ${fontSize === "small" ? "active" : ""}`}
-                onClick={() => handleFontSizeChange("small")}
-                title="Decrease Font Size"
-              >
-                A-
-              </button>
-              <button
-                className={`font-tool-btn ${fontSize === "normal" ? "active" : ""}`}
-                onClick={() => handleFontSizeChange("normal")}
-                title="Standard Font Size"
-              >
-                A
-              </button>
-              <button
-                className={`font-tool-btn ${fontSize === "large" ? "active" : ""}`}
-                onClick={() => handleFontSizeChange("large")}
-                title="Increase Font Size"
-              >
-                A+
-              </button>
-
-              <button
-                className={`contrast-tool-btn ${highContrast ? "active" : ""}`}
-                onClick={toggleContrast}
-                title="Toggle High Contrast"
-              >
-                {highContrast ? "Normal" : "Contrast"}
-              </button>
+            <div className="helpline-pill hide-mobile">
+              <span className="helpline-dot"></span>
+              <span>1913</span>
             </div>
 
-            <span className="utility-separator hide-mobile">|</span>
-
-            <div className="gov-lang-switch">
-              <button
-                className={`lang-btn ${lang === "EN" ? "active" : ""}`}
-                onClick={() => setLang("EN")}
-              >
-                EN
-              </button>
-              <span>/</span>
-              <button
-                className={`lang-btn ${lang === "HI" ? "active" : ""}`}
-                onClick={() => setLang("HI")}
-              >
-                हिन्दी
-              </button>
-            </div>
-
-            <span className="utility-separator hide-mobile">|</span>
-
-            <div className="gov-live-clock hide-mobile">
-              <span>{currentDate || "Live"}</span>
-            </div>
+            {/* Mobile Hamburger */}
+            <button
+              className="mobile-hamburger-btn"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+            >
+              <span>{mobileMenuOpen ? "✕" : "☰"}</span>
+            </button>
           </div>
         </div>
       </div>
-
-      <div className="gov-main-brand-header">
-        <div className="gov-container brand-inner">
-          <div className="brand-left" onClick={() => handleNavClick("home")} style={{ cursor: "pointer" }}>
-            <img src={inpactLogo} alt="IN-PACT emblem" className="header-emblem-shrink" style={{ height: "46px", width: "46px" }} />
-            <div className="gov-title-group">
-              <div className="gov-ministry-en">
-                Ministry of Housing & Urban Affairs &bull; Govt. of India
-              </div>
-              <div className="gov-ministry-hi">
-                आवासन एवं शहरी कार्य मंत्रालय &bull; ग्रेटर नोएडा
-              </div>
-              <div className="gov-portal-heading">
-                <span className="portal-acronym">IN-PACT</span>
-                <span className="portal-pipe">|</span>
-                <span className="portal-fullname">Integrated Grievance Redressal Portal</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="brand-right hide-tablet">
-            <div className="sih-mission-box">
-              <div className="sih-emblem-badge">
-                <span className="sih-star">★</span> SMART CITIES MISSION
-              </div>
-              <div className="sih-sub">e-Governance & Digital India Initiative</div>
-            </div>
-          </div>
-
-          <button
-            className="mobile-hamburger-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle navigation menu"
-          >
-            <span className="hamburger-icon">{mobileMenuOpen ? "✕" : "☰"}</span>
-          </button>
-        </div>
-      </div>
-
-      <nav className={`gov-nav-bar ${mobileMenuOpen ? "mobile-open" : ""}`}>
-        <div className="gov-container nav-inner">
-          <ul className="gov-nav-menu">
-            <li className={`gov-nav-item ${currentPage === "home" ? "active" : ""}`}>
-              <button className="gov-nav-link" onClick={() => handleNavClick("home")}>
-                <span className="nav-home-icon">🏠</span> Home
-              </button>
-            </li>
-
-            {(!currentUser || currentUser.role !== "admin") && (
-              <li className={`gov-nav-item ${currentPage === "citizen-dashboard" ? "active" : ""}`}>
-                <button className="gov-nav-link" onClick={() => handleNavClick("citizen-dashboard")}>
-                  Lodge Grievance
-                </button>
-              </li>
-            )}
-
-            <li className="gov-nav-item">
-              <button
-                className="gov-nav-link"
-                onClick={() => {
-                  if (currentPage !== "home") navigateTo("home");
-                  setMobileMenuOpen(false);
-                  setTimeout(() => {
-                    document.getElementById("tracker-section")?.scrollIntoView({ behavior: "smooth" });
-                  }, 100);
-                }}
-              >
-                Track Status
-              </button>
-            </li>
-
-            <li className="gov-nav-item">
-              <button
-                className="gov-nav-link"
-                onClick={() => {
-                  if (currentPage !== "home") navigateTo("home");
-                  setMobileMenuOpen(false);
-                  setTimeout(() => {
-                    document.getElementById("citizen-charter")?.scrollIntoView({ behavior: "smooth" });
-                  }, 100);
-                }}
-              >
-                Citizen Charter
-              </button>
-            </li>
-
-            <li className="gov-nav-item">
-              <button
-                className="gov-nav-link"
-                onClick={() => {
-                  if (currentPage !== "home") navigateTo("home");
-                  setMobileMenuOpen(false);
-                  setTimeout(() => {
-                    document.getElementById("nodal-officers")?.scrollIntoView({ behavior: "smooth" });
-                  }, 100);
-                }}
-              >
-                Nodal Directory
-              </button>
-            </li>
-          </ul>
-
-          <div className="gov-nav-auth">
-            {currentUser ? (
-              <UserMenu
-                user={currentUser}
-                dashboardActive={currentPage.includes("dashboard")}
-                onDashboard={() =>
-                  handleNavClick(currentUser.role === "admin" ? "gov-dashboard" : "citizen-dashboard")
-                }
-                onLogout={onLogout}
-              />
-            ) : (
-              <div className="gov-auth-btn-group">
-                <button
-                  className={`gov-btn-citizen ${currentPage === "citizen-login" ? "active" : ""}`}
-                  onClick={() => handleNavClick("citizen-login")}
-                >
-                  <span className="btn-icon">👤</span> Citizen Login (जनता)
-                </button>
-                <button
-                  className={`gov-btn-officer ${currentPage === "gov-login" ? "active" : ""}`}
-                  onClick={() => handleNavClick("gov-login")}
-                >
-                  <span className="btn-icon">🏛️</span> Officer SSO (अधिकारी)
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </nav>
     </header>
   );
 }

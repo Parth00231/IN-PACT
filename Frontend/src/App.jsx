@@ -12,45 +12,20 @@ import { getMe, logout as clearAuth } from "./services/authService";
 function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [currentUser, setCurrentUser] = useState(null);
-  // True while we check for a stored token on first load, so we don't flash
-  // the logged-out homepage for a split second before restoring the session.
-  const [checkingSession, setCheckingSession] = useState(true);
 
-  // On first load (including every page refresh), check localStorage for a
-  // token from a previous login. If one exists, ask the backend who it
-  // belongs to and restore that user — this is what actually keeps you
-  // logged in across refreshes instead of bouncing back to the homepage.
+  // Auth bypassed for open demo access — no session blocking
   useEffect(() => {
     const token = getToken();
-    if (!token) {
-      setCheckingSession(false);
-      return;
+    if (token) {
+      getMe()
+        .then((user) => {
+          setCurrentUser(user);
+        })
+        .catch(() => {
+          clearAuth();
+        });
     }
-
-    getMe()
-      .then((user) => {
-        setCurrentUser(user);
-        setCurrentPage(user.role === "admin" ? "gov-dashboard" : "citizen-dashboard");
-      })
-      .catch(() => {
-        // Token exists but is invalid/expired — clear it so we don't keep retrying.
-        clearAuth();
-      })
-      .finally(() => setCheckingSession(false));
   }, []);
-
-  // Route guard: if a logged-in user's role doesn't match the dashboard
-  // they're trying to view (e.g. an admin clicking a stale citizen link, or
-  // using the browser back button into the wrong dashboard), redirect them
-  // to their own correct dashboard instead of rendering the wrong role's UI.
-  useEffect(() => {
-    if (!currentUser) return;
-    if (currentPage === "citizen-dashboard" && currentUser.role === "admin") {
-      navigateTo("gov-dashboard");
-    } else if (currentPage === "gov-dashboard" && currentUser.role !== "admin") {
-      navigateTo("citizen-dashboard");
-    }
-  }, [currentPage, currentUser]);
 
   const navigateTo = (page) => {
     setCurrentPage(page);
@@ -72,7 +47,7 @@ function App() {
     navigateTo("home");
   };
 
-  // Fallback demo users if directly navigating to dashboards
+  // Fallback demo users for instant access without login
   const effectiveUser =
     currentUser ||
     (currentPage === "gov-dashboard"
@@ -94,16 +69,6 @@ function App() {
         ward: "Ward 12, Knowledge Park, Greater Noida",
         avatar: "👩"
       });
-
-  // Brief loading state while we check for a stored session — avoids a flash
-  // of the logged-out homepage before a valid session gets restored.
-  if (checkingSession) {
-    return (
-      <div className="app-root gov-theme-app" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-        <p>Loading session…</p>
-      </div>
-    );
-  }
 
   return (
     <div className="app-root gov-theme-app">

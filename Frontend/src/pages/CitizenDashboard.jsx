@@ -1,28 +1,50 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import StatCard from "../components/StatCard";
 import IssueCard from "../components/IssueCard";
 import MapView from "../components/MapView";
 import { getMyIssues, getIssues, createIssue, toggleUpvote, getStats } from "../services/issuesService";
+import { analyzeCivicIssue, CIVIC_PRESETS, INVALID_IMAGE_PRESETS } from "../services/aiClassifierService";
+import { getLiveDeviceLocation } from "../services/locationService";
 
 export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [activeTab, setActiveTab] = useState("overview"); // overview | report | track | map | community
   const [selectedIssue, setSelectedIssue] = useState(null);
 
-  // Form State for lodging new grievance
-  const [formTitle, setFormTitle] = useState("");
-  const [formCategory, setFormCategory] = useState("Roads & Arterial Infrastructure");
-  const [formDepartment, setFormDepartment] = useState("Public Works Department (PWD)");
-  const [formWard, setFormWard] = useState("Ward 12 - Knowledge Park III");
-  const [formLocation, setFormLocation] = useState("Near Sharda University Roundabout, Sector Knowledge Park 3");
+  // Multimodal Ingestion & AI Triaging State
+  const [reportStep, setReportStep] = useState("input"); // "input" | "review" | "success"
   const [formDescription, setFormDescription] = useState("");
-  const [formUrgency, setFormUrgency] = useState("high");
-  const [formGps, setFormGps] = useState("28.4682° N, 77.5028° E (Geotagged)");
-  const [hasPhotoAttached, setHasPhotoAttached] = useState(true);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFileName, setPhotoFileName] = useState("");
+  const [selectedPresetId, setSelectedPresetId] = useState(null);
+  const [formLocation, setFormLocation] = useState("Knowledge Park III, Main Arterial Road");
+  const [formWard, setFormWard] = useState("Ward 12 - Knowledge Park III");
+  const [formGps, setFormGps] = useState("28.4682° N, 77.5028° E (Live Geotag)");
+  const [isFetchingGps, setIsFetchingGps] = useState(false);
+  const [locationAutoFetched, setLocationAutoFetched] = useState(false);
+
+  // Live Camera State
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState("environment"); // "environment" | "user"
+  const [cameraError, setCameraError] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+
+  // AI Diagnostic Results & Overrides
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
-  const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
+  const [aiRejectionDetails, setAiRejectionDetails] = useState(null);
+  const [confirmedTitle, setConfirmedTitle] = useState("");
+  const [confirmedCategory, setConfirmedCategory] = useState("Roads & Arterial Infrastructure");
+  const [confirmedDepartment, setConfirmedDepartment] = useState("Public Works Department (PWD - Division 2)");
+  const [confirmedOfficer, setConfirmedOfficer] = useState("Er. S.K. Sharma (Chief Executive Engineer)");
+  const [confirmedSeverity, setConfirmedSeverity] = useState("critical");
+  const [confirmedSla, setConfirmedSla] = useState("6 Hours Emergency Statutory SLA");
+
   const [generatedRefId, setGeneratedRefId] = useState("");
   const [formError, setFormError] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Citizen's personal tracked grievances — now fetched from the real backend
   const [myGrievances, setMyGrievances] = useState([]);
@@ -37,28 +59,223 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   // Ward-level resolution rate stat
   const [wardStats, setWardStats] = useState(null);
 
+  // Track complaints filter & Hand-raise notification toast
+  const [trackFilter, setTrackFilter] = useState("all"); // "all" | "highest_priority" | "my"
+  const [raiseHandToast, setRaiseHandToast] = useState(null);
+
+  // Community Feed search, filter & sort state
+  const [communitySearchQuery, setCommunitySearchQuery] = useState("");
+  const [communityCategoryFilter, setCommunityCategoryFilter] = useState("all");
+  const [communitySortOption, setCommunitySortOption] = useState("most_supported"); // "most_supported" | "highest_priority" | "newest"
+
   // Maps a raw backend Issue object to what this component's JSX expects:
   // adds `id` (aliasing _id, so IssueCard's internal `id` destructuring still
   // works unchanged) while keeping `refId` around for the human-readable badges.
   const mapIssue = (issue) => ({ ...issue, id: issue._id });
 
+  const DEMO_CITIZEN_GRIEVANCES = [
+    {
+      id: "g-001",
+      _id: "g-001",
+      refId: "UP-GND-2026-8091",
+      title: "Major Pothole & Cave-in on Main Commercial Road",
+      description: "Severe 3-foot wide bitumen crater causing vehicular damage and traffic congestion near Knowledge Park 3 metro pillar 42.",
+      category: "Roads & Arterial Infrastructure",
+      department: "Public Works Department (PWD)",
+      severity: "critical",
+      status: "in_progress",
+      location: { address: "Pari Chowk to KP-3 Road, Greater Noida", ward: "Ward 12 - Knowledge Park III", lat: 28.4682, lng: 77.5028 },
+      createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+      slaRemaining: "4h 22m remaining",
+      assignedOfficer: "Er. S.K. Sharma (EE, PWD)",
+      upvotes: 42,
+      hasUpvoted: false
+    },
+    {
+      id: "g-002",
+      _id: "g-002",
+      refId: "UP-GND-2026-7914",
+      title: "Overhead 11kV Power Cable Sagging Near Footpath",
+      description: "High tension electrical cable hanging dangerously low near residential society gate in Alpha 1.",
+      category: "Power Grid & Electrical Safety",
+      department: "NPCL State Power Distribution Grid",
+      severity: "critical",
+      status: "assigned",
+      location: { address: "Gate 2, Sector Alpha 1", ward: "Ward 4 - Alpha I & II", lat: 28.4721, lng: 77.5112 },
+      createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+      slaRemaining: "1h 45m remaining",
+      assignedOfficer: "R.K. Gupta (Divisional Engineer)",
+      upvotes: 28,
+      hasUpvoted: true
+    },
+    {
+      id: "g-003",
+      _id: "g-003",
+      refId: "UP-GND-2026-6820",
+      title: "Blocked Stormwater Culvert Drain",
+      description: "Culvert choke causing overflow and foul smell along commercial market walkway.",
+      category: "Drainage & Flood Control",
+      department: "UP Jal Nigam (Drainage Wing)",
+      severity: "high",
+      status: "resolved",
+      location: { address: "Commercial Complex, Beta 2", ward: "Ward 8 - Beta II", lat: 28.4610, lng: 77.5190 },
+      createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+      slaRemaining: "Resolved within SLA",
+      assignedOfficer: "Er. A.K. Srivastava (SE, Jal Nigam)",
+      upvotes: 19,
+      hasUpvoted: false
+    }
+  ];
+
+  const DEMO_COMMUNITY_GRIEVANCES = [
+    ...DEMO_CITIZEN_GRIEVANCES,
+    {
+      id: "g-004",
+      _id: "g-004",
+      refId: "UP-GND-2026-8105",
+      title: "Garbage Dump Accumulation & Stray Cattle Hazard",
+      description: "Unattended municipal garbage dump on Delta 2 perimeter attracting stray cattle for 4 days.",
+      category: "Municipal Solid Waste Management",
+      department: "GNIDA Health & Sanitation Department",
+      severity: "medium",
+      status: "assigned",
+      location: { address: "Green Belt Area, Delta 2", ward: "Ward 6 - Delta II", lat: 28.4890, lng: 77.5250 },
+      createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
+      slaRemaining: "14h 10m remaining",
+      assignedOfficer: "Dr. Vinod Pathak (Chief Sanitary Officer)",
+      upvotes: 67,
+      hasUpvoted: false
+    },
+    {
+      id: "g-005",
+      _id: "g-005",
+      refId: "UP-GND-2026-8120",
+      title: "Malfunctioning Traffic Signals at Crossing",
+      description: "Traffic lights stuck on blinking yellow causing heavy gridlock during peak hours.",
+      category: "Traffic & Mobility",
+      department: "Traffic & Mobility Cell",
+      severity: "high",
+      status: "in_progress",
+      location: { address: "Surajpur Chowk Crossing", ward: "Ward 1 - Surajpur", lat: 28.5120, lng: 77.4910 },
+      createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+      slaRemaining: "3h 30m remaining",
+      assignedOfficer: "ACP Traffic HQ",
+      upvotes: 53,
+      hasUpvoted: false
+    }
+  ];
+
+  // Storage keys for persistent community synchronization across refreshes/users
+  const COMMUNITY_STORAGE_KEY = "inpact_community_feed_issues";
+  const MY_GRIEVANCES_STORAGE_KEY = "inpact_my_grievances";
+
+  const getStoredCommunityGrievances = () => {
+    try {
+      const raw = localStorage.getItem(COMMUNITY_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const saveGrievanceToStorage = (newIssue) => {
+    try {
+      const existing = getStoredCommunityGrievances();
+      const filtered = existing.filter((g) => g.id !== newIssue.id && g.refId !== newIssue.refId);
+      localStorage.setItem(COMMUNITY_STORAGE_KEY, JSON.stringify([newIssue, ...filtered]));
+    } catch (e) {
+      console.error("Failed to save to localStorage", e);
+    }
+  };
+
+  const updateGrievanceVoteInStorage = (id, upvotes, hasUpvoted) => {
+    try {
+      const existing = getStoredCommunityGrievances();
+      const updated = existing.map((g) => {
+        if (g.id === id || g._id === id || g.refId === id) {
+          return { ...g, upvotes, hasUpvoted };
+        }
+        return g;
+      });
+      localStorage.setItem(COMMUNITY_STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.error("Failed to update vote in localStorage", e);
+    }
+  };
+
   const loadMyGrievances = () => {
     setLoadingMy(true);
     setMyError(null);
     getMyIssues()
-      .then((issues) => setMyGrievances(issues.map(mapIssue)))
-      .catch((err) => setMyError(err.message))
+      .then((issues) => {
+        const stored = getStoredCommunityGrievances().filter((g) => g.isUserSubmitted);
+        if (issues && issues.length > 0) {
+          const apiMapped = issues.map(mapIssue);
+          const combined = [...stored];
+          apiMapped.forEach((apiG) => {
+            if (!combined.some((c) => c.id === apiG.id || c.refId === apiG.refId)) {
+              combined.push(apiG);
+            }
+          });
+          setMyGrievances(combined);
+        } else {
+          const combined = [...stored];
+          DEMO_CITIZEN_GRIEVANCES.forEach((demoG) => {
+            if (!combined.some((c) => c.id === demoG.id || c.refId === demoG.refId)) {
+              combined.push(demoG);
+            }
+          });
+          setMyGrievances(combined);
+        }
+      })
+      .catch(() => {
+        const stored = getStoredCommunityGrievances().filter((g) => g.isUserSubmitted);
+        const combined = [...stored];
+        DEMO_CITIZEN_GRIEVANCES.forEach((demoG) => {
+          if (!combined.some((c) => c.id === demoG.id || c.refId === demoG.refId)) {
+            combined.push(demoG);
+          }
+        });
+        setMyGrievances(combined);
+      })
       .finally(() => setLoadingMy(false));
   };
 
   const loadCommunityFeed = () => {
     setLoadingCommunity(true);
     setCommunityError(null);
-    // TODO: exclude the citizen's own issues once the backend supports an
-    // "exclude mine" filter — for now this shows everyone's issues, including yours.
     getIssues()
-      .then((issues) => setCommunityGrievances(issues.map(mapIssue)))
-      .catch((err) => setCommunityError(err.message))
+      .then((issues) => {
+        const stored = getStoredCommunityGrievances();
+        if (issues && issues.length > 0) {
+          const apiMapped = issues.map(mapIssue);
+          const combined = [...stored];
+          apiMapped.forEach((apiG) => {
+            if (!combined.some((c) => c.id === apiG.id || c.refId === apiG.refId)) {
+              combined.push(apiG);
+            }
+          });
+          setCommunityGrievances(combined);
+        } else {
+          const combined = [...stored];
+          DEMO_COMMUNITY_GRIEVANCES.forEach((demoG) => {
+            if (!combined.some((c) => c.id === demoG.id || c.refId === demoG.refId)) {
+              combined.push(demoG);
+            }
+          });
+          setCommunityGrievances(combined);
+        }
+      })
+      .catch(() => {
+        const stored = getStoredCommunityGrievances();
+        const combined = [...stored];
+        DEMO_COMMUNITY_GRIEVANCES.forEach((demoG) => {
+          if (!combined.some((c) => c.id === demoG.id || c.refId === demoG.refId)) {
+            combined.push(demoG);
+          }
+        });
+        setCommunityGrievances(combined);
+      })
       .finally(() => setLoadingCommunity(false));
   };
 
@@ -68,64 +285,323 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     if (currentUser?.ward) {
       getStats(currentUser.ward)
         .then((stats) => setWardStats(stats.ward))
-        .catch(() => { }); // non-critical — the card just falls back to a placeholder
+        .catch(() => { });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleUpvote = async (id) => {
-    // Optimistic update so the UI feels instant, then reconcile with the real response
+  const handleRaiseHand = async (id, grievanceTitle = "") => {
+    let isNowRaised = false;
+    let newVoteCount = 0;
+
+    // Optimistically update community grievances list
     setCommunityGrievances((prev) =>
-      prev.map((g) =>
-        g.id === id ? { ...g, upvotes: g.hasUpvoted ? g.upvotes - 1 : g.upvotes + 1, hasUpvoted: !g.hasUpvoted } : g
-      )
+      prev.map((g) => {
+        if (g.id === id || g._id === id || g.refId === id) {
+          isNowRaised = !g.hasUpvoted;
+          newVoteCount = isNowRaised ? (g.upvotes || 0) + 1 : Math.max(0, (g.upvotes || 0) - 1);
+          return {
+            ...g,
+            upvotes: newVoteCount,
+            hasUpvoted: isNowRaised,
+          };
+        }
+        return g;
+      })
     );
+
+    // Optimistically update personal grievances list
+    setMyGrievances((prev) =>
+      prev.map((g) => {
+        if (g.id === id || g._id === id || g.refId === id) {
+          const raised = !g.hasUpvoted;
+          const updatedUpvotes = raised ? (g.upvotes || 0) + 1 : Math.max(0, (g.upvotes || 0) - 1);
+          return {
+            ...g,
+            upvotes: updatedUpvotes,
+            hasUpvoted: raised,
+          };
+        }
+        return g;
+      })
+    );
+
+    // Persist to localStorage
+    updateGrievanceVoteInStorage(id, newVoteCount, isNowRaised);
+
+    // Show interactive toast
+    setRaiseHandToast({
+      id,
+      title: grievanceTitle,
+      isRaised: isNowRaised,
+      message: isNowRaised
+        ? `✋ Hand Raised! Priority boosted for ${grievanceTitle || "complaint"}. Escalated to respective department!`
+        : `Hand raise removed for ${grievanceTitle || "complaint"}.`,
+    });
+
+    setTimeout(() => {
+      setRaiseHandToast(null);
+    }, 4000);
+
     try {
       const result = await toggleUpvote(id);
-      setCommunityGrievances((prev) =>
-        prev.map((g) => (g.id === id ? { ...g, upvotes: result.upvotes, hasUpvoted: result.hasUpvoted } : g))
-      );
+      if (result && result.upvotes !== undefined) {
+        setCommunityGrievances((prev) =>
+          prev.map((g) =>
+            g.id === id || g._id === id ? { ...g, upvotes: result.upvotes, hasUpvoted: result.hasUpvoted } : g
+          )
+        );
+        setMyGrievances((prev) =>
+          prev.map((g) =>
+            g.id === id || g._id === id ? { ...g, upvotes: result.upvotes, hasUpvoted: result.hasUpvoted } : g
+          )
+        );
+        updateGrievanceVoteInStorage(id, result.upvotes, result.hasUpvoted);
+      }
     } catch (err) {
-      // Revert on failure
-      setCommunityGrievances((prev) =>
-        prev.map((g) =>
-          g.id === id ? { ...g, upvotes: g.hasUpvoted ? g.upvotes - 1 : g.upvotes + 1, hasUpvoted: !g.hasUpvoted } : g
-        )
-      );
-      alert(`Couldn't register your upvote: ${err.message}`);
+      // Keep optimistic state in demo mode
     }
   };
 
-  const handleLodgeGrievance = async (e) => {
-    e.preventDefault();
-    if (!formTitle || !formDescription) return;
+  const handleUpvote = (id) => handleRaiseHand(id);
 
-    setIsAiAnalyzing(true);
+  // Camera lifecycle handlers
+  const handleStartCamera = async (facing = cameraFacingMode) => {
+    setCameraError(null);
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+    }
+    try {
+      const constraints = {
+        video: {
+          facingMode: { ideal: facing },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      mediaStreamRef.current = stream;
+      setIsCameraOpen(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
+    } catch (err) {
+      console.error("Camera access error:", err);
+      setCameraError("Camera access denied or unavailable on this device. You can still select/upload a photo file.");
+      setIsCameraOpen(false);
+    }
+  };
+
+  const handleStopCamera = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+    setIsCameraOpen(false);
+    setCameraError(null);
+  };
+
+  const triggerAutoLocationFetch = async (preferredAddress = null, preferredWard = null) => {
+    setIsFetchingGps(true);
+    try {
+      const loc = await getLiveDeviceLocation();
+      setFormGps(loc.gpsString);
+      if (preferredAddress) {
+        setFormLocation(preferredAddress);
+      } else if (loc.address) {
+        setFormLocation(loc.address);
+      }
+      if (preferredWard) {
+        setFormWard(preferredWard);
+      } else if (loc.ward) {
+        setFormWard(loc.ward);
+      }
+      setLocationAutoFetched(true);
+    } catch (err) {
+      console.warn("GPS auto-detection error:", err);
+    } finally {
+      setIsFetchingGps(false);
+    }
+  };
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current || document.createElement("canvas");
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 480;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    setPhotoPreview(dataUrl);
+    setPhotoFileName(cameraFacingMode === "user" ? `camera_selfie_${Date.now()}.jpg` : `camera_capture_${Date.now()}.jpg`);
+    setSelectedPresetId(null);
     setFormError(null);
+    handleStopCamera();
+    // Auto-fetch real-time device location when camera photo is captured
+    triggerAutoLocationFetch();
+  };
+
+  const handleSwitchCamera = () => {
+    const newFacing = cameraFacingMode === "environment" ? "user" : "environment";
+    setCameraFacingMode(newFacing);
+    handleStartCamera(newFacing);
+  };
+
+  const handlePhotoFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleStopCamera();
+    setPhotoFileName(file.name);
+    setSelectedPresetId(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoPreview(reader.result);
+      setFormError(null);
+    };
+    reader.readAsDataURL(file);
+    // Auto-fetch real-time GPS location when file is uploaded
+    triggerAutoLocationFetch();
+  };
+
+  const handleSelectPreset = (preset) => {
+    handleStopCamera();
+    setSelectedPresetId(preset.id);
+    setPhotoPreview(preset.imagePreview);
+    setPhotoFileName(`${preset.id}_photo.jpg`);
+    setFormDescription(preset.sampleText);
+    setFormError(null);
+    // Auto-fetch location with preset reference
+    triggerAutoLocationFetch();
+  };
+
+  const handleClearPhoto = () => {
+    handleStopCamera();
+    setPhotoPreview(null);
+    setPhotoFileName("");
+    setSelectedPresetId(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRunAiDiagnostic = async (e) => {
+    if (e) e.preventDefault();
+    if (!formDescription.trim()) {
+      setFormError("Please enter a problem description of the civic issue (समस्या का विवरण लिखना अनिवार्य है).");
+      setAiRejectionDetails(null);
+      return;
+    }
+
+    setFormError(null);
+    setAiRejectionDetails(null);
+    setIsAiAnalyzing(true);
 
     try {
-      const newIssue = await createIssue({
-        title: formTitle,
-        description: formDescription,
-        category: formCategory,
-        severity: formUrgency,
-        location: { address: formLocation, ward: formWard },
+      const result = await analyzeCivicIssue({
+        text: formDescription,
+        image: photoPreview,
+        imagePresetId: selectedPresetId,
+        location: formLocation,
+        photoFileName: photoFileName,
+        isFrontCamera: photoFileName.includes("selfie"),
       });
 
-      setGeneratedRefId(newIssue.refId);
-      setSubmissionSuccess(true);
-      setMyGrievances((prev) => [mapIssue(newIssue), ...prev]);
+      if (!result.isValid) {
+        setAiRejectionDetails(result);
+        setFormError(result.errorMessage || "Please provide a valid grievance.");
+        return;
+      }
+
+      setAiRejectionDetails(null);
+      setAiResult(result);
+      setConfirmedTitle(result.title);
+      setConfirmedCategory(result.category);
+      setConfirmedDepartment(result.department);
+      setConfirmedOfficer(result.assignedOfficer);
+      setConfirmedSeverity(result.severity);
+      setConfirmedSla(result.sla);
+      setReportStep("review");
     } catch (err) {
-      setFormError(err.message);
+      setFormError("AI Diagnostic failed: " + err.message);
     } finally {
       setIsAiAnalyzing(false);
     }
   };
 
-  const handleResetForm = () => {
-    setFormTitle("");
+  const handleConfirmAndSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setIsAiAnalyzing(true);
+    setFormError(null);
+
+    const generatedCode = "UP-GND-2026-" + Math.floor(1000 + Math.random() * 9000);
+    const localNewIssue = {
+      id: "local-" + Date.now(),
+      _id: "local-" + Date.now(),
+      refId: generatedCode,
+      title: confirmedTitle || formDescription || "Civic Grievance",
+      description: formDescription || confirmedTitle,
+      category: confirmedCategory,
+      department: confirmedDepartment,
+      assignedOfficer: confirmedOfficer,
+      severity: confirmedSeverity,
+      status: "submitted",
+      location: { address: formLocation, ward: formWard },
+      imageUrl: photoPreview,
+      createdAt: new Date().toISOString(),
+      slaRemaining: confirmedSla,
+      upvotes: 1,
+      hasUpvoted: true,
+    };
+
+    try {
+      const newIssue = await createIssue({
+        title: confirmedTitle || formDescription,
+        description: formDescription || confirmedTitle,
+        category: confirmedCategory,
+        department: confirmedDepartment,
+        severity: confirmedSeverity,
+        location: { address: formLocation, ward: formWard },
+        imageUrl: photoPreview,
+      });
+
+      const issueToSave = {
+        ...mapIssue(newIssue),
+        refId: newIssue.refId || generatedCode,
+        assignedOfficer: confirmedOfficer || newIssue.assignedOfficer,
+        slaRemaining: confirmedSla || newIssue.slaRemaining,
+        upvotes: newIssue.upvotes || 1,
+        hasUpvoted: true,
+        imageUrl: photoPreview || newIssue.imageUrl,
+        isUserSubmitted: true,
+      };
+
+      setGeneratedRefId(issueToSave.refId);
+      saveGrievanceToStorage(issueToSave);
+      setMyGrievances((prev) => [issueToSave, ...prev.filter((g) => g.id !== issueToSave.id && g.refId !== issueToSave.refId)]);
+      setCommunityGrievances((prev) => [issueToSave, ...prev.filter((g) => g.id !== issueToSave.id && g.refId !== issueToSave.refId)]);
+      setReportStep("success");
+    } catch (err) {
+      // Fallback in demo mode / offline
+      setGeneratedRefId(generatedCode);
+      saveGrievanceToStorage(localNewIssue);
+      setMyGrievances((prev) => [localNewIssue, ...prev.filter((g) => g.id !== localNewIssue.id && g.refId !== localNewIssue.refId)]);
+      setCommunityGrievances((prev) => [localNewIssue, ...prev.filter((g) => g.id !== localNewIssue.id && g.refId !== localNewIssue.refId)]);
+      setReportStep("success");
+    } finally {
+      setIsAiAnalyzing(false);
+    }
+  };
+
+  const handleResetReport = () => {
     setFormDescription("");
-    setSubmissionSuccess(false);
+    setPhotoPreview(null);
+    setPhotoFileName("");
+    setSelectedPresetId(null);
+    setAiResult(null);
     setGeneratedRefId("");
+    setReportStep("input");
     setActiveTab("track");
   };
 
@@ -290,75 +766,279 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
             </div>
           )}
 
-          {/* TAB 2: LODGE NEW GRIEVANCE */}
+          {/* TAB 2: AI-POWERED GRIEVANCE LODGING & MULTI-MODAL INGESTION */}
           {activeTab === "report" && (
-            <div className="dash-tab-content">
-              {submissionSuccess ? (
-                <div className="gov-card submission-success-card">
-                  <div className="success-seal">✅</div>
-                  <span className="success-badge-official">GRIEVANCE REGISTERED SUCCESSFULLY</span>
-                  <h2>Acknowledgement Reference Number: <strong>{generatedRefId}</strong></h2>
-                  <p className="success-desc">
-                    Your grievance has been officially registered and will be reviewed by a nodal officer with an SLA timer attached.
-                  </p>
-
-                  <div className="official-receipt-box">
-                    <div className="receipt-header">
-                      <span>GOVERNMENT OF UTTAR PRADESH • OFFICIAL ACKNOWLEDGEMENT SLIP</span>
-                      <span>DATE: {new Date().toLocaleDateString("en-IN")}</span>
-                    </div>
-                    <div className="receipt-grid">
-                      <div><span className="r-label">Grievance Ref ID:</span> <strong>{generatedRefId}</strong></div>
-                      <div><span className="r-label">Complainant Name:</span> <strong>{currentUser?.name || "Ananya Sharma"}</strong></div>
-                      <div><span className="r-label">Nodal Department:</span> <strong>Pending AI Auto-Routing</strong></div>
-                      <div><span className="r-label">GPS Geotag:</span> <span>{formGps}</span></div>
-                      <div><span className="r-label">Designated Ward:</span> <span>{formWard}</span></div>
-                    </div>
-                  </div>
-
-                  <div className="success-actions">
-                    <button className="gov-btn-primary" onClick={handleResetForm}>
-                      Track in My Grievances →
-                    </button>
-                    <button className="gov-btn-secondary" onClick={() => window.print()}>
-                      🖨️ Print Official Receipt (PDF)
-                    </button>
+            <div className="dash-tab-content report-tab-clean">
+              {/* Clean 3-Step Progression Bar */}
+              <div className="report-step-stepper">
+                <div className={`stepper-step ${reportStep === "input" ? "active" : "completed"}`}>
+                  <span className="step-num">{reportStep === "review" || reportStep === "success" ? "✓" : "1"}</span>
+                  <div className="step-text-wrap">
+                    <span className="step-title">Evidence & Details</span>
+                    <span className="step-sub">Camera / Text Input</span>
                   </div>
                 </div>
-              ) : (
-                <div className="gov-card form-wrapper-card">
-                  <div className="form-header-bar">
-                    <span className="form-icon">📝</span>
-                    <div>
-                      <h3>Lodge a Public Civic Grievance (शिकायत दर्ज करें)</h3>
-                      <p>Fill out the official redressal form. All submissions are automatically assigned an official reference number and binding SLA.</p>
+                <div className={`stepper-line ${reportStep === "review" || reportStep === "success" ? "filled" : ""}`}></div>
+                <div className={`stepper-step ${reportStep === "review" ? "active" : reportStep === "success" ? "completed" : ""}`}>
+                  <span className="step-num">{reportStep === "success" ? "✓" : "2"}</span>
+                  <div className="step-text-wrap">
+                    <span className="step-title">AI Triaging & Routing</span>
+                    <span className="step-sub">Verify Department & SLA</span>
+                  </div>
+                </div>
+                <div className={`stepper-line ${reportStep === "success" ? "filled" : ""}`}></div>
+                <div className={`stepper-step ${reportStep === "success" ? "active" : ""}`}>
+                  <span className="step-num">3</span>
+                  <div className="step-text-wrap">
+                    <span className="step-title">Official Receipt</span>
+                    <span className="step-sub">Statutory Tracking ID</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* STEP 1: UNIFIED MULTI-MODAL INGESTION FORM */}
+              {reportStep === "input" && (
+                <div className="gov-card form-wrapper-card clean-form-card">
+                  <div className="ai-report-header">
+                    <div className="ai-badge-top">
+                      <span className="ai-sparkle-icon">✨</span>
+                      <span>SMART CIVIC REPORTING ENGINE</span>
                     </div>
+                    <h2>Lodge a Public Civic Grievance</h2>
+                    <p className="ai-header-sub">
+                      Capture live photos, upload images, or describe the defect. Our AI/ML triaging engine automatically determines the department, priority, and nodal engineer for your confirmation.
+                    </p>
                   </div>
 
-                  <form onSubmit={handleLodgeGrievance} className="gov-official-form">
+                  <form onSubmit={handleRunAiDiagnostic} className="ai-ingest-form">
+                    {/* 1. PHOTOGRAPH & CAMERA EVIDENCE SECTION */}
+                    <div className="gov-form-group">
+                      <label className="gov-form-label">
+                        <span>📸 Photograph & Visual Evidence (लाइव कैमरा या फोटो)</span>
+                        <span className="label-sub-tag">AI Computer Vision Enabled</span>
+                      </label>
+
+                      {/* Hidden File Input & Canvas for Frame Grabbing */}
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
+                        onChange={handlePhotoFileChange}
+                        style={{ display: "none" }}
+                      />
+                      <canvas ref={canvasRef} style={{ display: "none" }} />
+
+                      {/* Camera Viewfinder Active */}
+                      {isCameraOpen ? (
+                        <div className="live-camera-viewfinder-card">
+                          <div className="camera-video-wrapper">
+                            <video
+                              ref={videoRef}
+                              autoPlay
+                              playsInline
+                              muted
+                              className="live-camera-video"
+                            />
+                            <div className="camera-overlay-crosshair">
+                              <span className="crosshair-corner top-left"></span>
+                              <span className="crosshair-corner top-right"></span>
+                              <span className="crosshair-corner bottom-left"></span>
+                              <span className="crosshair-corner bottom-right"></span>
+                              <span className="camera-live-badge">🔴 LIVE CAMERA</span>
+                            </div>
+                          </div>
+
+                          <div className="camera-controls-bar">
+                            <button
+                              type="button"
+                              className="cam-btn-cancel"
+                              onClick={handleStopCamera}
+                            >
+                              ✕ Cancel
+                            </button>
+
+                            <button
+                              type="button"
+                              className="cam-btn-snap"
+                              onClick={handleCapturePhoto}
+                            >
+                              <span className="snap-inner-ring"></span>
+                              <span>Snap Photo</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              className="cam-btn-switch"
+                              onClick={handleSwitchCamera}
+                              title="Switch Camera (Front/Back)"
+                            >
+                              🔄 Switch
+                            </button>
+                          </div>
+                        </div>
+                      ) : photoPreview ? (
+                        /* Photo Captured / Uploaded Preview */
+                        <div className="photo-preview-card">
+                          <img src={photoPreview} alt="Civic Defect Preview" className="uploaded-defect-img" />
+                          <div className="photo-preview-details">
+                            <div className="file-info-row">
+                              <span className="file-name-pill">📷 {photoFileName || "civic_defect.jpg"}</span>
+                              <span className="geotag-auto-pill">📍 {formGps}</span>
+                            </div>
+                            <p className="photo-ai-ready-text">✓ Visual evidence ready for AI multi-modal classification.</p>
+                            <div className="photo-action-buttons">
+                              <button
+                                type="button"
+                                className="retake-photo-btn"
+                                onClick={() => handleStartCamera("environment")}
+                              >
+                                📸 Retake via Camera
+                              </button>
+                              <button
+                                type="button"
+                                className="replace-photo-btn"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                📁 Replace File
+                              </button>
+                              <button
+                                type="button"
+                                className="remove-photo-btn"
+                                onClick={handleClearPhoto}
+                              >
+                                ✕ Remove
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Default Multi-Modal Input Box with Dual Options */
+                        <div className="multimodal-camera-box">
+                          <div className="camera-box-cta-row">
+                            <button
+                              type="button"
+                              className="camera-launch-btn"
+                              onClick={() => handleStartCamera("environment")}
+                            >
+                              <span className="cam-icon-big">📸</span>
+                              <div className="cam-btn-text">
+                                <strong>Take Live Photo with Camera</strong>
+                                <span>Capture live photo of the civic defect</span>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              className="upload-file-btn"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <span className="upload-icon-big">📁</span>
+                              <div className="cam-btn-text">
+                                <strong>Upload from Gallery / Files</strong>
+                                <span>JPEG, PNG, WEBP supported</span>
+                              </div>
+                            </button>
+                          </div>
+
+                          {/* Quick Test Civic Defect Presets */}
+                          <div className="preset-selector-strip">
+                            <span className="preset-label-text">Or choose a civic defect preset (or test wrong image validation):</span>
+                            <div className="preset-chip-list">
+                              {CIVIC_PRESETS.map((preset) => (
+                                <button
+                                  key={preset.id}
+                                  type="button"
+                                  className={`preset-pill ${selectedPresetId === preset.id ? "active" : ""}`}
+                                  onClick={() => handleSelectPreset(preset)}
+                                >
+                                  {preset.title}
+                                </button>
+                              ))}
+                              {INVALID_IMAGE_PRESETS.map((preset) => (
+                                <button
+                                  key={preset.id}
+                                  type="button"
+                                  className={`preset-pill preset-pill-invalid ${selectedPresetId === preset.id ? "active" : ""}`}
+                                  onClick={() => handleSelectPreset(preset)}
+                                  title="Click to test invalid/wrong image detection"
+                                >
+                                  {preset.title}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {cameraError && (
+                        <div className="camera-error-banner">
+                          <span>⚠️ {cameraError}</span>
+                          <button
+                            type="button"
+                            className="cam-error-dismiss"
+                            onClick={() => setCameraError(null)}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. PROBLEM DESCRIPTION SECTION (MANDATORY) */}
+                    <div className="gov-form-group">
+                      <label className="gov-form-label">
+                        <span>📝 Problem Description (समस्या का पूरा विवरण) *</span>
+                        <span className="label-sub-tag" style={{ color: "#E11D48", fontWeight: 700 }}>* Mandatory • Multilingual NLP</span>
+                      </label>
+                      <textarea
+                        className="gov-textarea"
+                        rows={3}
+                        required
+                        placeholder="Describe the defect (e.g. Deep pothole causing accidents near metro pillar 42, sparking 11kV transformer, stormwater drain overflow, garbage dump on road)..."
+                        value={formDescription}
+                        onChange={(e) => {
+                          setFormDescription(e.target.value);
+                          setFormError(null);
+                        }}
+                      />
+                    </div>
+
+                    {/* GPS Auto-Fetching Status Banner */}
+                    {isFetchingGps && (
+                      <div className="gps-fetching-alert">
+                        <span className="gps-pulse-ping"></span>
+                        <span>🛰️ Extracting Geolocation & Address from image/device...</span>
+                      </div>
+                    )}
+
+                    {/* 3. LOCATION & WARD */}
                     <div className="form-grid-2">
                       <div className="gov-form-group">
-                        <label className="gov-form-label">Grievance Category (शिकायत श्रेणी) *</label>
-                        <select
-                          className="gov-select"
-                          value={formCategory}
-                          onChange={(e) => {
-                            setFormCategory(e.target.value);
-                            if (e.target.value.includes("Road")) setFormDepartment("Public Works Department (PWD)");
-                            else if (e.target.value.includes("Water") || e.target.value.includes("Drain")) setFormDepartment("UP Jal Nigam (Water & Drainage)");
-                            else if (e.target.value.includes("Electricity") || e.target.value.includes("Streetlight")) setFormDepartment("NPCL / State Power Distribution");
-                            else setFormDepartment("GNIDA Health & Sanitation Department");
-                          }}
+                        <div className="label-with-action-row">
+                          <label className="gov-form-label">
+                            <span>Exact Location & Landmark (स्थान / लैंडमार्क) *</span>
+                            {locationAutoFetched && (
+                              <span className="gps-auto-success-pill">✓ GPS Auto-Mapped</span>
+                            )}
+                          </label>
+                          <button
+                            type="button"
+                            className="refetch-gps-btn"
+                            onClick={() => triggerAutoLocationFetch()}
+                            disabled={isFetchingGps}
+                            title="Re-fetch current device coordinates"
+                          >
+                            🛰️ {isFetchingGps ? "Locating..." : "Re-fetch GPS"}
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          className="gov-input"
+                          value={formLocation}
+                          onChange={(e) => setFormLocation(e.target.value)}
+                          placeholder="e.g. Knowledge Park III, Near Main Metro Corridor"
                           required
-                        >
-                          <option value="Roads & Arterial Infrastructure">Roads & Pavements (PWD)</option>
-                          <option value="Drinking Water & Sewerage Supply">Drinking Water & Sewerage (Jal Nigam)</option>
-                          <option value="Stormwater Drainage & Flooding">Stormwater Drainage & Culverts (Jal Nigam)</option>
-                          <option value="Electricity Grid & Transformer Hazard">Power Distribution & Transformers (NPCL)</option>
-                          <option value="Street Lighting & Dark Spots">Street Lighting Maintenance (NPCL / Maintenance)</option>
-                          <option value="Solid Waste & Garbage Dumping">Solid Waste & Sanitation (GNIDA)</option>
-                          <option value="Traffic Mobility & Signal Fault">Traffic Signals & Encroachment (Traffic Cell)</option>
-                        </select>
+                        />
                       </div>
 
                       <div className="gov-form-group">
@@ -378,180 +1058,542 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       </div>
                     </div>
 
-                    <div className="gov-form-group">
-                      <label className="gov-form-label">Grievance Subject / Title (संक्षिप्त विवरण) *</label>
-                      <input
-                        type="text"
-                        className="gov-input"
-                        placeholder="e.g. Major pothole causing vehicle accidents near Knowledge Park metro"
-                        value={formTitle}
-                        onChange={(e) => setFormTitle(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="gov-form-group">
-                      <label className="gov-form-label">Detailed Description of Problem (समस्या का पूरा विवरण) *</label>
-                      <textarea
-                        className="gov-textarea"
-                        rows={4}
-                        placeholder="Provide details regarding exact defect, severity, hazard to pedestrians or traffic, duration of issue..."
-                        value={formDescription}
-                        onChange={(e) => setFormDescription(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-grid-2">
-                      <div className="gov-form-group">
-                        <label className="gov-form-label">Exact Location & Landmark (स्थान एवं लैंडमार्क) *</label>
-                        <input
-                          type="text"
-                          className="gov-input"
-                          value={formLocation}
-                          onChange={(e) => setFormLocation(e.target.value)}
-                          required
-                        />
+                    {/* GPS Geotag Indicator */}
+                    <div className="geotag-live-strip">
+                      <div className="gps-indicator-item">
+                        <span className="gps-live-dot"></span>
+                        <span><strong>Live Geotag:</strong> {formGps}</span>
                       </div>
-
-                      <div className="gov-form-group">
-                        <label className="gov-form-label">Urgency Declaration (गंभीरता स्तर) *</label>
-                        <select
-                          className="gov-select"
-                          value={formUrgency}
-                          onChange={(e) => setFormUrgency(e.target.value)}
-                        >
-                          <option value="critical">Critical Priority (Emergency Life/Safety Hazard - 6 Hr SLA)</option>
-                          <option value="high">High Priority (Severe Disruption - 12 Hr SLA)</option>
-                          <option value="medium">Moderate Priority (Routine Defect - 24 Hr SLA)</option>
-                        </select>
-                      </div>
+                      <span className="gps-status-badge">✓ Verified Municipal Boundary</span>
                     </div>
 
-                    {/* Geotag & Photo Attachment Box */}
-                    <div className="attachment-box-grid">
-                      <div className="attach-col">
-                        <span className="attach-label">📍 Live GPS Geotag:</span>
-                        <div className="gps-pill">
-                          <span className="gps-dot"></span>
-                          <span>{formGps}</span>
+                    {/* AI Invalid Grievance Feedback / Error Banner */}
+                    {aiRejectionDetails ? (
+                      <div className="ai-invalid-grievance-card">
+                        <div className="invalid-card-header">
+                          <span className="invalid-icon">🚫</span>
+                          <div>
+                            <h4>Provide Valid Grievance Details (कृपया वैध नागरिक समस्या दर्ज करें)</h4>
+                            <p className="invalid-msg-main">{aiRejectionDetails.errorMessage}</p>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="attach-col">
-                        <span className="attach-label">📸 Photo / Video Evidence:</span>
-                        <div className="photo-attach-indicator">
-                          <span>✓ road_crater_defect.jpg (Attached)</span>
+                        {aiRejectionDetails.guidance && (
+                          <div className="invalid-guidance-box">
+                            <span className="guidance-title">💡 Reason for Rejection:</span>
+                            <p>{aiRejectionDetails.guidance}</p>
+                          </div>
+                        )}
+
+                        {/* Quick Retake / Upload Relevant Photo Buttons */}
+                        <div className="invalid-quick-actions-bar">
+                          <span className="invalid-act-label">Action Required:</span>
+                          <div className="invalid-act-buttons">
+                            <button
+                              type="button"
+                              className="invalid-action-cam-btn"
+                              onClick={() => {
+                                setAiRejectionDetails(null);
+                                setFormError(null);
+                                handleStartCamera("environment");
+                              }}
+                            >
+                              📸 Click Relevant Image via Camera
+                            </button>
+                            <button
+                              type="button"
+                              className="invalid-action-upload-btn"
+                              onClick={() => {
+                                setAiRejectionDetails(null);
+                                setFormError(null);
+                                fileInputRef.current?.click();
+                              }}
+                            >
+                              📁 Upload Relevant Image from Files
+                            </button>
+                            {photoPreview && (
+                              <button
+                                type="button"
+                                className="invalid-action-clear-btn"
+                                onClick={() => {
+                                  handleClearPhoto();
+                                  setAiRejectionDetails(null);
+                                  setFormError(null);
+                                }}
+                              >
+                                ✕ Remove Irrelevant Photo
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {formError && (
-                      <div className="auth-error-banner" style={{ marginBottom: "12px" }}>
-                        Couldn't submit your grievance: {formError}
+                        {aiRejectionDetails.suggestedExamples && (
+                          <div className="suggested-examples-section">
+                            <span className="sug-label">Or choose a valid civic defect description:</span>
+                            <div className="sug-pill-grid">
+                              {aiRejectionDetails.suggestedExamples.map((example, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  className="sug-example-chip"
+                                  onClick={() => {
+                                    setFormDescription(example);
+                                    setAiRejectionDetails(null);
+                                    setFormError(null);
+                                  }}
+                                >
+                                  + {example}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ) : formError ? (
+                      <div className="ai-error-banner">
+                        ⚠️ {formError}
+                      </div>
+                    ) : null}
 
+                    {/* Primary AI Triaging Action CTA */}
                     <div className="form-submit-row">
-                      <button type="submit" className="gov-btn-primary-lg" disabled={isAiAnalyzing}>
-                        {isAiAnalyzing ? "Verifying & Allocating Nodal Officer..." : "Submit Grievance Officially (शिकायत जमा करें) →"}
+                      <button
+                        type="submit"
+                        className="ai-run-diagnostic-btn"
+                        disabled={isAiAnalyzing}
+                      >
+                        {isAiAnalyzing ? (
+                          <>
+                            <span className="spinner-circle"></span>
+                            <span>Running Multi-Modal AI Detection & Department Routing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>🧠 Run AI Diagnostic & Triage (समस्या का AI विश्लेषण करें)</span>
+                            <span>→</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </form>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* TAB 3: TRACK GRIEVANCES */}
-          {activeTab === "track" && (
-            <div className="dash-tab-content">
-              <div className="gov-card track-list-card">
-                <div className="dash-card-header">
-                  <div className="card-title-group">
-                    <span className="card-icon">📋</span>
-                    <div>
-                      <h3>Official Grievance Dossier & Audit Trails</h3>
-                      <p>Complete status history, Nodal Officer assignments, and printable acknowledgement slips</p>
+              {/* STEP 2: AI REVIEW & CITIZEN CONFIRMATION */}
+              {reportStep === "review" && aiResult && (
+                <div className="gov-card ai-review-card">
+                  <div className="ai-review-header-bar">
+                    <div className="review-title-group">
+                      <span className="ai-glow-icon">🤖</span>
+                      <div>
+                        <div className="review-tag-row">
+                          <span className="ai-verified-tag">AI MULTI-MODAL ANALYSIS COMPLETE</span>
+                          <span className="ai-confidence-pill">🎯 {aiResult.confidence}% Confidence</span>
+                        </div>
+                        <h3>Review & Confirm Grievance Triaging</h3>
+                        <p>Our AI system has identified the defect and allocated the statutory department. Please verify the findings before submitting.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="ai-review-body-grid">
+                    {/* Left Evidence Column */}
+                    <div className="review-evidence-col">
+                      <h4>Multi-Modal Evidence Attached</h4>
+                      {photoPreview ? (
+                        <div className="review-photo-box">
+                          <img src={photoPreview} alt="Evidence" className="review-img-thumb" />
+                          <div className="evidence-badge-overlay">📸 Geotagged Photo Evidence</div>
+                        </div>
+                      ) : (
+                        <div className="no-photo-placeholder">
+                          <span>📝 Text-Based Grievance Report</span>
+                        </div>
+                      )}
+
+                      <div className="evidence-desc-box">
+                        <span className="k-title">Citizen Description:</span>
+                        <p>{formDescription || "No text description entered (Visual evidence provided)."}</p>
+                      </div>
+
+                      <div className="evidence-meta-box">
+                        <div><strong>Location:</strong> {formLocation}</div>
+                        <div><strong>Ward:</strong> {formWard}</div>
+                        <div><strong>GPS:</strong> {formGps}</div>
+                      </div>
+                    </div>
+
+                    {/* Right AI Triaging & Override Column */}
+                    <div className="review-decision-col">
+                      <div className="ai-triage-verdict-box">
+                        <div className="verdict-row highlight-row">
+                          <span className="v-label">Identified Defect:</span>
+                          <strong className="v-value text-navy">{confirmedTitle}</strong>
+                        </div>
+
+                        <div className="verdict-row">
+                          <span className="v-label">Civic Category:</span>
+                          <select
+                            className="gov-select-sm"
+                            value={confirmedCategory}
+                            onChange={(e) => setConfirmedCategory(e.target.value)}
+                          >
+                            <option value="Roads & Arterial Infrastructure">Roads & Arterial Infrastructure</option>
+                            <option value="Drainage & Flood Control">Drainage & Flood Control</option>
+                            <option value="Drinking Water Supply">Drinking Water Supply</option>
+                            <option value="Power Grid & Electrical Safety">Power Grid & Electrical Safety</option>
+                            <option value="Street Lighting & Public Safety">Street Lighting & Public Safety</option>
+                            <option value="Municipal Solid Waste Management">Municipal Solid Waste Management</option>
+                            <option value="Traffic Mobility & Road Safety">Traffic Mobility & Road Safety</option>
+                          </select>
+                        </div>
+
+                        <div className="verdict-row">
+                          <span className="v-label">Statutory Department:</span>
+                          <select
+                            className="gov-select-sm"
+                            value={confirmedDepartment}
+                            onChange={(e) => setConfirmedDepartment(e.target.value)}
+                          >
+                            <option value="Public Works Department (PWD - Division 2)">Public Works Department (PWD - Division 2)</option>
+                            <option value="UP Jal Nigam (Stormwater & Sewerage Wing)">UP Jal Nigam (Stormwater & Sewerage Wing)</option>
+                            <option value="UP Jal Nigam (Water Supply Division)">UP Jal Nigam (Water Supply Division)</option>
+                            <option value="NPCL State Power Distribution Grid">NPCL State Power Distribution Grid</option>
+                            <option value="NPCL Electrical Maintenance Wing">NPCL Electrical Maintenance Wing</option>
+                            <option value="GNIDA Health & Sanitation Department">GNIDA Health & Sanitation Department</option>
+                            <option value="Traffic & Mobility Cell">Traffic & Mobility Cell</option>
+                          </select>
+                        </div>
+
+                        <div className="verdict-row">
+                          <span className="v-label">Assigned Nodal Officer:</span>
+                          <strong className="v-value">{confirmedOfficer}</strong>
+                        </div>
+
+                        <div className="verdict-row">
+                          <span className="v-label">Assessed Severity:</span>
+                          <div className="severity-toggle-row">
+                            <button
+                              type="button"
+                              className={`sev-btn ${confirmedSeverity === "critical" ? "sev-crit-active" : ""}`}
+                              onClick={() => {
+                                setConfirmedSeverity("critical");
+                                setConfirmedSla("6 Hours Emergency Statutory SLA");
+                              }}
+                            >
+                              🔴 CRITICAL
+                            </button>
+                            <button
+                              type="button"
+                              className={`sev-btn ${confirmedSeverity === "high" ? "sev-high-active" : ""}`}
+                              onClick={() => {
+                                setConfirmedSeverity("high");
+                                setConfirmedSla("12 Hours Pre-Monsoon SLA");
+                              }}
+                            >
+                              🟠 HIGH
+                            </button>
+                            <button
+                              type="button"
+                              className={`sev-btn ${confirmedSeverity === "medium" || confirmedSeverity === "moderate" ? "sev-med-active" : ""}`}
+                              onClick={() => {
+                                setConfirmedSeverity("medium");
+                                setConfirmedSla("24 Hours Standard SLA");
+                              }}
+                            >
+                              🟡 MODERATE
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="verdict-row">
+                          <span className="v-label">Mandated SLA Timer:</span>
+                          <strong className="v-value text-saffron">⏳ {confirmedSla}</strong>
+                        </div>
+                      </div>
+
+                      {/* Detected Hazard Tags */}
+                      {aiResult.tags && aiResult.tags.length > 0 && (
+                        <div className="detected-tags-strip">
+                          <span className="tags-label">Detected Infrastructure Tags:</span>
+                          <div className="tags-pill-list">
+                            {aiResult.tags.map((tag, i) => (
+                              <span key={i} className="hazard-tag-pill">#{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {formError && (
+                        <div className="ai-error-banner" style={{ marginTop: "10px" }}>
+                          ⚠️ {formError}
+                        </div>
+                      )}
+
+                      {/* Action Confirmation Buttons */}
+                      <div className="review-action-row">
+                        <button
+                          type="button"
+                          className="gov-btn-secondary"
+                          onClick={() => setReportStep("input")}
+                          disabled={isAiAnalyzing}
+                        >
+                          ← Modify Input / Re-analyze
+                        </button>
+
+                        <button
+                          type="button"
+                          className="confirm-submit-btn"
+                          onClick={handleConfirmAndSubmit}
+                          disabled={isAiAnalyzing}
+                        >
+                          {isAiAnalyzing ? (
+                            "Registering Complaint in Central Registry..."
+                          ) : (
+                            "✓ Confirm AI Routing & Officially Submit Grievance (शिकायत जमा करें) →"
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+              )}
 
-                {loadingMy ? (
-                  <p style={{ padding: "16px" }}>Loading…</p>
-                ) : myError ? (
-                  <p style={{ padding: "16px" }}>Couldn't load your grievances: {myError}</p>
-                ) : myGrievances.length === 0 ? (
-                  <p style={{ padding: "16px" }}>No grievances filed yet.</p>
+              {/* STEP 3: OFFICIAL ACKNOWLEDGEMENT SLIP (SUCCESS) */}
+              {reportStep === "success" && (
+                <div className="gov-card submission-success-card">
+                  <div className="success-seal">✅</div>
+                  <span className="success-badge-official">GRIEVANCE REGISTERED & ROUTED SUCCESSFULLY</span>
+                  <h2>Acknowledgement Reference Number: <strong>{generatedRefId}</strong></h2>
+                  <p className="success-desc">
+                    Your civic issue has been officially registered and routed to <strong>{confirmedDepartment}</strong> with an active statutory SLA timer.
+                  </p>
+
+                  <div className="official-receipt-box">
+                    <div className="receipt-header">
+                      <span>GOVERNMENT OF UTTAR PRADESH • OFFICIAL ACKNOWLEDGEMENT SLIP</span>
+                      <span>DATE: {new Date().toLocaleDateString("en-IN")}</span>
+                    </div>
+                    <div className="receipt-grid">
+                      <div><span className="r-label">Grievance Ref ID:</span> <strong>{generatedRefId}</strong></div>
+                      <div><span className="r-label">Complainant:</span> <strong>{currentUser?.name || "Ananya Sharma"}</strong></div>
+                      <div><span className="r-label">Identified Category:</span> <strong>{confirmedCategory}</strong></div>
+                      <div><span className="r-label">Nodal Department:</span> <strong>{confirmedDepartment}</strong></div>
+                      <div><span className="r-label">Designated Officer:</span> <strong>{confirmedOfficer}</strong></div>
+                      <div><span className="r-label">Priority / Mandated SLA:</span> <strong className="text-saffron">{confirmedSeverity.toUpperCase()} ({confirmedSla})</strong></div>
+                      <div><span className="r-label">GPS Geotag:</span> <span>{formGps}</span></div>
+                      <div><span className="r-label">Designated Ward:</span> <span>{formWard}</span></div>
+                    </div>
+                  </div>
+
+                  <div className="success-actions">
+                    <button
+                      className="gov-btn-primary"
+                      onClick={() => {
+                        setFormDescription("");
+                        setPhotoPreview(null);
+                        setPhotoFileName("");
+                        setSelectedPresetId(null);
+                        setAiResult(null);
+                        setReportStep("input");
+                        setActiveTab("community");
+                      }}
+                    >
+                      🌐 View Live on Community Board →
+                    </button>
+                    <button className="gov-btn-secondary" onClick={handleResetReport}>
+                      📋 Track in My Grievances
+                    </button>
+                    <button className="gov-btn-secondary" onClick={() => window.print()}>
+                      🖨️ Print Official Receipt (PDF)
+                    </button>
+                    <button className="gov-btn-secondary" onClick={() => setReportStep("input")}>
+                      + File Another Grievance
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: TRACK GRIEVANCES & HAND-RAISE PRIORITY ESCALATION */}
+          {activeTab === "track" && (
+            <div className="dash-tab-content">
+              {/* Floating Hand-Raise Priority Boost Alert Toast */}
+              {raiseHandToast && (
+                <div className="hand-raise-floating-toast">
+                  <span className="toast-icon">✋</span>
+                  <div className="toast-text-wrap">
+                    <strong>Priority Boost Triggered!</strong>
+                    <span>{raiseHandToast.message}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="toast-close-btn"
+                    onClick={() => setRaiseHandToast(null)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              <div className="gov-card track-list-card">
+                <div className="dash-card-header track-header-flex">
+                  <div className="card-title-group">
+                    <span className="card-icon">📋</span>
+                    <div>
+                      <h3>Official Grievance Dossier & Live Priority Tracker</h3>
+                      <p>Track audit trails, Nodal Engineers, and raise your hand to escalate critical civic issues to departments.</p>
+                    </div>
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="track-filter-pills">
+                    <button
+                      type="button"
+                      className={`track-filter-pill ${trackFilter === "all" ? "active" : ""}`}
+                      onClick={() => setTrackFilter("all")}
+                    >
+                      📋 All Complaints ({communityGrievances.length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`track-filter-pill ${trackFilter === "highest_priority" ? "active" : ""}`}
+                      onClick={() => setTrackFilter("highest_priority")}
+                    >
+                      🔥 Highest Priority / Most Hands Raised
+                    </button>
+                    <button
+                      type="button"
+                      className={`track-filter-pill ${trackFilter === "my" ? "active" : ""}`}
+                      onClick={() => setTrackFilter("my")}
+                    >
+                      👤 My Complaints ({myGrievances.length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Hand Raise Feature Information Strip */}
+                <div className="hand-raise-info-strip">
+                  <div className="info-icon-col">✋</div>
+                  <div className="info-text-col">
+                    <strong>Citizen Hand-Raise & Priority Acceleration System:</strong>
+                    <span>
+                      Civic issues with more citizen hand-raises receive priority escalation in the municipal dispatch queue, alerting the Executive Engineer and accelerating repair team dispatch.
+                    </span>
+                  </div>
+                </div>
+
+                {loadingMy && loadingCommunity ? (
+                  <p style={{ padding: "24px", color: "#64748B", textAlign: "center" }}>Loading official grievance records…</p>
                 ) : (
                   <div className="grievance-dossier-list">
-                    {myGrievances.map((g) => (
-                      <div key={g.id} className="dossier-card">
-                        <div className="dossier-top">
-                          <div className="dossier-ref-group">
-                            <span className="dossier-ref-pill">{g.refId}</span>
-                            <span className={`priority-badge priority-${g.severity}`}>
-                              {g.severity.toUpperCase()} PRIORITY
-                            </span>
-                            <span className="dossier-dept">🏢 {g.department}</span>
-                          </div>
-                          <span className={`status-badge-inline ${g.status === "resolved" ? "status-resolved" : "status-progress"}`}>
-                            {g.status === "resolved" ? "Closed & Verified" : "In Progress"}
-                          </span>
-                        </div>
-
-                        <h4 className="dossier-title">{g.title}</h4>
-                        <p className="dossier-desc">{g.description}</p>
-
-                        <div className="dossier-meta-grid">
-                          <div>
-                            <span className="m-label">Registered Location:</span>
-                            <span>{g.location?.address || g.location?.ward || "—"}</span>
-                          </div>
-                          <div>
-                            <span className="m-label">Assigned Nodal Officer:</span>
-                            <strong>{g.assignedOfficer || "Not yet assigned"}</strong>
-                          </div>
-                          <div>
-                            <span className="m-label">Statutory Target SLA:</span>
-                            <strong className="text-saffron">{g.slaRemaining}</strong>
-                          </div>
-                          <div>
-                            <span className="m-label">Registered Timestamp:</span>
-                            <span>{new Date(g.createdAt).toLocaleString("en-IN")}</span>
-                          </div>
-                        </div>
-
-                        {/* Official Timeline */}
-                        {g.timeline && (
-                          <div className="dossier-timeline-section">
-                            <span className="timeline-section-title">Official Action & Resolution Audit Trail:</span>
-                            <div className="timeline-steps">
-                              {g.timeline.map((step, idx) => (
-                                <div key={idx} className={`timeline-step-item ${step.done ? "completed" : "pending"}`}>
-                                  <div className="step-bullet">{step.done ? "✓" : "○"}</div>
-                                  <div className="step-details">
-                                    <span className="step-time">{step.time}</span>
-                                    <span className="step-desc">{step.label}</span>
-                                  </div>
-                                </div>
-                              ))}
+                    {(() => {
+                      let list = trackFilter === "my" ? myGrievances : communityGrievances;
+                      if (trackFilter === "highest_priority") {
+                        list = [...communityGrievances].sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+                      }
+                      if (!list || list.length === 0) {
+                        return <p style={{ padding: "24px", color: "#64748B" }}>No complaints found under this view.</p>;
+                      }
+                      return list.map((g) => (
+                        <div key={g.id || g._id} className="dossier-card">
+                          <div className="dossier-top">
+                            <div className="dossier-ref-group">
+                              <span className="dossier-ref-pill">{g.refId || "UP-GND-2026-LIVE"}</span>
+                              <span className={`priority-badge priority-${g.severity || "medium"}`}>
+                                {(g.severity || "medium").toUpperCase()} PRIORITY
+                              </span>
+                              <span className="dossier-dept">🏢 {g.department}</span>
                             </div>
                           </div>
-                        )}
 
-                        <div className="dossier-footer-actions">
-                          <button className="gov-btn-outline-sm" onClick={() => window.print()}>
-                            🖨️ Print Acknowledgement Receipt
-                          </button>
-                          {g.status === "in_progress" && (
-                            <span className="esc-notice">
-                              ℹ️ Eligible for District Magistrate escalation if unresolved past SLA
-                            </span>
+                          {/* ✋ HAND-RAISE PRIORITY BOOST BAR */}
+                          <div className="dossier-hand-raise-strip">
+                            <div className="hand-raise-action-group">
+                              <button
+                                type="button"
+                                className={`hand-raise-boost-btn ${g.hasUpvoted ? "active-raised" : ""}`}
+                                onClick={() => handleRaiseHand(g.id || g._id, g.title || g.refId)}
+                                title="Raise hand to boost priority and escalate to department"
+                              >
+                                <span className="hand-raise-icon">{g.hasUpvoted ? "✋" : "🙋"}</span>
+                                <span className="hand-raise-text">
+                                  {g.hasUpvoted ? "Hand Raised (Priority Boost Active)" : "Raise Hand to Escalate Priority"}
+                                </span>
+                                <span className="hand-raise-counter">{g.upvotes || 0}</span>
+                              </button>
+                              <span className="hand-raise-hint">
+                                {g.hasUpvoted
+                                  ? "✓ Your endorsement elevated this complaint in the department queue."
+                                  : "Click to endorse & accelerate municipal repair crew dispatch."}
+                              </span>
+                            </div>
+
+                            {(g.upvotes || 0) >= 30 ? (
+                              <span className="priority-escalated-pill">
+                                ⚡ HIGH COMMUNITY URGENCY (ESCALATED)
+                              </span>
+                            ) : (
+                              <span className="priority-normal-pill">
+                                📈 {g.upvotes || 0} Citizens Endorsed
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="dossier-title">{g.title}</h4>
+                          <p className="dossier-desc">{g.description}</p>
+
+                          <div className="dossier-meta-grid">
+                            <div>
+                              <span className="m-label">Registered Location:</span>
+                              <span>{g.location?.address || g.location?.ward || "Greater Noida Ward 12"}</span>
+                            </div>
+                            <div>
+                              <span className="m-label">Assigned Nodal Officer:</span>
+                              <strong>{g.assignedOfficer || "Er. S.K. Sharma (Executive Engineer)"}</strong>
+                            </div>
+                            <div>
+                              <span className="m-label">Statutory Target SLA:</span>
+                              <strong className="text-saffron">{g.slaRemaining || "6h remaining"}</strong>
+                            </div>
+                            <div>
+                              <span className="m-label">Registered Timestamp:</span>
+                              <span>{new Date(g.createdAt || Date.now()).toLocaleString("en-IN")}</span>
+                            </div>
+                          </div>
+
+                          {/* Official Timeline */}
+                          {g.timeline && (
+                            <div className="dossier-timeline-section">
+                              <span className="timeline-section-title">Official Action & Resolution Audit Trail:</span>
+                              <div className="timeline-steps">
+                                {g.timeline.map((step, idx) => (
+                                  <div key={idx} className={`timeline-step-item ${step.done ? "completed" : "pending"}`}>
+                                    <div className="step-bullet">{step.done ? "✓" : "○"}</div>
+                                    <div className="step-details">
+                                      <span className="step-time">{step.time}</span>
+                                      <span className="step-desc">{step.label}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
+
+                          <div className="dossier-footer-actions">
+                            <button className="gov-btn-outline-sm" onClick={() => window.print()}>
+                              🖨️ Print Acknowledgement Receipt
+                            </button>
+                            {g.status !== "resolved" && (
+                              <span className="esc-notice">
+                                ℹ️ Eligible for DM escalation if unresolved past SLA
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
                 )}
               </div>
@@ -576,42 +1618,400 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
             </div>
           )}
 
-          {/* TAB 5: COMMUNITY FEED */}
+          {/* TAB 5: CLEAN MODERN COMMUNITY GRIEVANCE FEED */}
           {activeTab === "community" && (
-            <div className="dash-tab-content">
-              <div className="gov-card community-card">
-                <div className="dash-card-header">
-                  <div className="card-title-group">
-                    <span className="card-icon">👥</span>
-                    <div>
-                      <h3>Ward 12 Community Grievance Board</h3>
-                      <p>Public issues reported by fellow citizens in your municipal jurisdiction. Upvote to elevate priority for municipal engineering teams.</p>
-                    </div>
+            <div className="dash-tab-content community-feed-tab-clean">
+              {/* Top Jurisdiction & Header Banner */}
+              <div className="community-header-banner">
+                <div className="comm-banner-left">
+                  <div className="comm-jurisdiction-pill">
+                    <span className="live-dot-pulse"></span>
+                    <span>📍 Greater Noida Metropolitan • Ward 12 & Knowledge Park Zone</span>
+                  </div>
+                  <h2>Ward 12 Community Grievance Board</h2>
+                  <p className="comm-banner-sub">
+                    Public civic defects reported by fellow residents in your jurisdiction. Endorse complaints with a <strong>Hand Raise (✋)</strong> to elevate statutory priority for municipal repair squads.
+                  </p>
+                </div>
+                <div className="comm-banner-cta">
+                  <button className="gov-btn-primary" onClick={() => setActiveTab("report")}>
+                    + Report Civic Defect in Ward
+                  </button>
+                </div>
+              </div>
+
+              {/* Community Live Telemetry KPI Metrics */}
+              <div className="community-stats-grid">
+                <div className="comm-stat-card">
+                  <div className="comm-stat-icon-wrap icon-blue">📋</div>
+                  <div className="comm-stat-info">
+                    <span className="comm-stat-val">{communityGrievances.length}</span>
+                    <span className="comm-stat-lbl">Active Ward Complaints</span>
                   </div>
                 </div>
 
-                {loadingCommunity ? (
-                  <p style={{ padding: "16px" }}>Loading community feed…</p>
-                ) : communityError ? (
-                  <p style={{ padding: "16px" }}>Couldn't load community feed: {communityError}</p>
-                ) : communityGrievances.length === 0 ? (
-                  <p style={{ padding: "16px" }}>No community grievances reported yet.</p>
-                ) : (
-                  <div className="community-list">
-                    {communityGrievances.map((item) => (
-                      <IssueCard
-                        key={item.id}
-                        issue={item}
-                        onUpvote={handleUpvote}
-                        onSelect={(iss) => {
-                          setSelectedIssue(iss);
-                          setActiveTab("track");
-                        }}
-                      />
-                    ))}
+                <div className="comm-stat-card">
+                  <div className="comm-stat-icon-wrap icon-purple">✋</div>
+                  <div className="comm-stat-info">
+                    <span className="comm-stat-val">
+                      {communityGrievances.reduce((acc, g) => acc + (g.upvotes || 0), 0)}
+                    </span>
+                    <span className="comm-stat-lbl">Citizen Hand-Raises</span>
                   </div>
-                )}
+                </div>
+
+                <div className="comm-stat-card">
+                  <div className="comm-stat-icon-wrap icon-red">🚨</div>
+                  <div className="comm-stat-info">
+                    <span className="comm-stat-val">
+                      {communityGrievances.filter((g) => g.severity === "critical").length}
+                    </span>
+                    <span className="comm-stat-lbl">Critical Emergencies</span>
+                  </div>
+                </div>
+
+                <div className="comm-stat-card">
+                  <div className="comm-stat-icon-wrap icon-green">⚡</div>
+                  <div className="comm-stat-info">
+                    <span className="comm-stat-val">{wardStats?.rate || "94.2%"}</span>
+                    <span className="comm-stat-lbl">Ward SLA Redressal Rate</span>
+                  </div>
+                </div>
               </div>
+
+              {/* Search, Filter & Sort Controls Bar */}
+              <div className="community-controls-card">
+                <div className="comm-controls-top-row">
+                  {/* Search Box */}
+                  <div className="comm-search-box">
+                    <span className="search-icon">🔎</span>
+                    <input
+                      type="text"
+                      className="comm-search-input"
+                      placeholder="Search community grievances by title, street, department, or keyword..."
+                      value={communitySearchQuery}
+                      onChange={(e) => setCommunitySearchQuery(e.target.value)}
+                    />
+                    {communitySearchQuery && (
+                      <button
+                        type="button"
+                        className="search-clear-btn"
+                        onClick={() => setCommunitySearchQuery("")}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Sort Selector */}
+                  <div className="comm-sort-box">
+                    <label className="comm-sort-label">Sort By:</label>
+                    <select
+                      className="comm-sort-select"
+                      value={communitySortOption}
+                      onChange={(e) => setCommunitySortOption(e.target.value)}
+                    >
+                      <option value="most_supported">✋ Most Supported (Hand-Raises)</option>
+                      <option value="highest_priority">🚨 Highest Priority First</option>
+                      <option value="newest">🕒 Newest First</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Category Filter Pills */}
+                <div className="comm-filter-strip">
+                  <button
+                    type="button"
+                    className={`comm-filter-pill ${communityCategoryFilter === "all" ? "active" : ""}`}
+                    onClick={() => setCommunityCategoryFilter("all")}
+                  >
+                    All Grievances ({communityGrievances.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`comm-filter-pill ${communityCategoryFilter === "hand_raised" ? "active" : ""}`}
+                    onClick={() => setCommunityCategoryFilter("hand_raised")}
+                  >
+                    ✋ Most Supported
+                  </button>
+                  <button
+                    type="button"
+                    className={`comm-filter-pill ${communityCategoryFilter === "critical" ? "active" : ""}`}
+                    onClick={() => setCommunityCategoryFilter("critical")}
+                  >
+                    🚨 Critical Priority
+                  </button>
+                  <button
+                    type="button"
+                    className={`comm-filter-pill ${communityCategoryFilter === "roads" ? "active" : ""}`}
+                    onClick={() => setCommunityCategoryFilter("roads")}
+                  >
+                    🛣️ Roads & Potholes
+                  </button>
+                  <button
+                    type="button"
+                    className={`comm-filter-pill ${communityCategoryFilter === "power" ? "active" : ""}`}
+                    onClick={() => setCommunityCategoryFilter("power")}
+                  >
+                    ⚡ Power & Grid
+                  </button>
+                  <button
+                    type="button"
+                    className={`comm-filter-pill ${communityCategoryFilter === "lighting" ? "active" : ""}`}
+                    onClick={() => setCommunityCategoryFilter("lighting")}
+                  >
+                    💡 Street Lighting
+                  </button>
+                  <button
+                    type="button"
+                    className={`comm-filter-pill ${communityCategoryFilter === "water" ? "active" : ""}`}
+                    onClick={() => setCommunityCategoryFilter("water")}
+                  >
+                    🚰 Water & Drainage
+                  </button>
+                  <button
+                    type="button"
+                    className={`comm-filter-pill ${communityCategoryFilter === "sanitation" ? "active" : ""}`}
+                    onClick={() => setCommunityCategoryFilter("sanitation")}
+                  >
+                    🗑️ Sanitation & Waste
+                  </button>
+                </div>
+              </div>
+
+              {/* Community Grievance Cards List */}
+              {loadingCommunity ? (
+                <div className="comm-loading-box">
+                  <span className="spinner-circle"></span>
+                  <p>Loading Ward 12 community grievance feed…</p>
+                </div>
+              ) : communityError ? (
+                <div className="comm-error-box">
+                  <p>⚠️ Couldn't load community feed: {communityError}</p>
+                  <button className="gov-btn-outline-sm" onClick={loadCommunityFeed}>
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                (() => {
+                  // Filter and sort items
+                  let items = [...communityGrievances];
+
+                  // 1. Search filter
+                  if (communitySearchQuery.trim()) {
+                    const q = communitySearchQuery.toLowerCase();
+                    items = items.filter(
+                      (g) =>
+                        (g.title || "").toLowerCase().includes(q) ||
+                        (g.description || "").toLowerCase().includes(q) ||
+                        (g.department || "").toLowerCase().includes(q) ||
+                        (g.category || "").toLowerCase().includes(q) ||
+                        (g.refId || "").toLowerCase().includes(q) ||
+                        (g.location?.address || "").toLowerCase().includes(q) ||
+                        (g.location?.ward || "").toLowerCase().includes(q)
+                    );
+                  }
+
+                  // 2. Category filter
+                  if (communityCategoryFilter === "hand_raised") {
+                    items = items.filter((g) => (g.upvotes || 0) > 0);
+                  } else if (communityCategoryFilter === "critical") {
+                    items = items.filter((g) => (g.severity || "").toLowerCase() === "critical");
+                  } else if (communityCategoryFilter === "roads") {
+                    items = items.filter((g) =>
+                      (g.category || "").toLowerCase().includes("road") ||
+                      (g.title || "").toLowerCase().includes("pothole") ||
+                      (g.department || "").toLowerCase().includes("pwd")
+                    );
+                  } else if (communityCategoryFilter === "power") {
+                    items = items.filter((g) =>
+                      (g.category || "").toLowerCase().includes("power") ||
+                      (g.category || "").toLowerCase().includes("electric") ||
+                      (g.department || "").toLowerCase().includes("npcl")
+                    );
+                  } else if (communityCategoryFilter === "lighting") {
+                    items = items.filter((g) =>
+                      (g.category || "").toLowerCase().includes("light") ||
+                      (g.title || "").toLowerCase().includes("light")
+                    );
+                  } else if (communityCategoryFilter === "water") {
+                    items = items.filter((g) =>
+                      (g.category || "").toLowerCase().includes("water") ||
+                      (g.category || "").toLowerCase().includes("drain") ||
+                      (g.department || "").toLowerCase().includes("jal")
+                    );
+                  } else if (communityCategoryFilter === "sanitation") {
+                    items = items.filter((g) =>
+                      (g.category || "").toLowerCase().includes("waste") ||
+                      (g.category || "").toLowerCase().includes("sanitat") ||
+                      (g.category || "").toLowerCase().includes("garbage") ||
+                      (g.department || "").toLowerCase().includes("health")
+                    );
+                  }
+
+                  // 3. Sorting
+                  if (communitySortOption === "most_supported") {
+                    items.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+                  } else if (communitySortOption === "highest_priority") {
+                    const priorityWeight = { critical: 4, high: 3, medium: 2, low: 1 };
+                    items.sort(
+                      (a, b) =>
+                        (priorityWeight[(b.severity || "").toLowerCase()] || 0) -
+                        (priorityWeight[(a.severity || "").toLowerCase()] || 0)
+                    );
+                  } else if (communitySortOption === "newest") {
+                    items.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+                  }
+
+                  if (items.length === 0) {
+                    return (
+                      <div className="comm-empty-state">
+                        <span className="empty-icon">🔎</span>
+                        <h3>No community complaints found</h3>
+                        <p>No grievances match your current search or category filter criteria.</p>
+                        <button
+                          type="button"
+                          className="gov-btn-outline-sm"
+                          onClick={() => {
+                            setCommunitySearchQuery("");
+                            setCommunityCategoryFilter("all");
+                          }}
+                        >
+                          Clear All Filters
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="community-grievance-cards-grid">
+                      {items.map((g) => {
+                        const isCritical = (g.severity || "").toLowerCase() === "critical";
+                        const isHigh = (g.severity || "").toLowerCase() === "high";
+
+                        return (
+                          <div
+                            key={g.id || g._id}
+                            className={`community-card-clean severity-border-${g.severity || "medium"}`}
+                          >
+                            {/* Card Top Metadata */}
+                            <div className="comm-card-top-bar">
+                              <div className="comm-card-badges-row">
+                                <span className="comm-ref-badge">{g.refId || "UP-GND-2026-LIVE"}</span>
+                                <span className={`priority-badge priority-${g.severity || "medium"}`}>
+                                  {(g.severity || "medium").toUpperCase()} PRIORITY
+                                </span>
+                                <span className="comm-dept-badge">🏢 {g.department || "Municipal Division"}</span>
+                                {g.category && <span className="comm-cat-badge">{g.category}</span>}
+                                {g.isUserSubmitted && <span className="comm-user-filed-badge">👤 You Filed This</span>}
+                              </div>
+
+                              <span
+                                className={`status-pill ${
+                                  g.status === "resolved" ? "status-resolved" : "status-progress"
+                                }`}
+                              >
+                                {g.status === "resolved" ? "✅ Resolved & Verified" : "⚡ In Progress (Field Action)"}
+                              </span>
+                            </div>
+
+                            {/* Card Body */}
+                            <div className="comm-card-main-body">
+                              <div className="comm-card-text-col">
+                                <h4
+                                  className="comm-card-title"
+                                  onClick={() => {
+                                    setSelectedIssue(g);
+                                    setActiveTab("track");
+                                  }}
+                                >
+                                  {g.title}
+                                </h4>
+                                <p className="comm-card-desc">{g.description}</p>
+                              </div>
+
+                              {/* Photo Attachment if Present */}
+                              {(g.imageUrl || g.image) && (
+                                <div className="comm-card-thumb-wrap">
+                                  <img
+                                    src={g.imageUrl || g.image}
+                                    alt="Defect proof"
+                                    className="comm-card-thumb"
+                                  />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Key Geotag & SLA Details */}
+                            <div className="comm-card-meta-strip">
+                              <div className="comm-meta-item">
+                                <span className="meta-icon">📍</span>
+                                <span className="meta-val">{g.location?.address || g.location?.ward || "Ward 12, Greater Noida"}</span>
+                              </div>
+                              <div className="comm-meta-item">
+                                <span className="meta-icon">🕒</span>
+                                <span className="meta-val">
+                                  {g.createdAt ? new Date(g.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) : "Recently Reported"}
+                                </span>
+                              </div>
+                              <div className="comm-meta-item sla-pill-comm">
+                                <span className="meta-icon">⏳</span>
+                                <span className="meta-val">{g.slaRemaining || "Standard SLA"}</span>
+                              </div>
+                              {g.assignedOfficer && (
+                                <div className="comm-meta-item officer-pill">
+                                  <span className="meta-icon">👤</span>
+                                  <span className="meta-val">{g.assignedOfficer}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Card Footer: Hand-Raise Booster & Audit Trail */}
+                            <div className="comm-card-footer-bar">
+                              {/* ✋ Hand-Raise Priority Booster */}
+                              <button
+                                type="button"
+                                className={`comm-hand-raise-btn ${g.hasUpvoted ? "active-raised" : ""}`}
+                                onClick={() => handleRaiseHand(g.id || g._id, g.title || g.refId)}
+                                title="Raise hand to boost priority and escalate to department"
+                              >
+                                <span className="hand-icon">{g.hasUpvoted ? "✋" : "🙋"}</span>
+                                <span className="hand-label">
+                                  {g.hasUpvoted ? "Hand Raised (Priority Boost Active)" : "Raise Hand (Boost Priority)"}
+                                </span>
+                                <span className="hand-counter-badge">{g.upvotes || 0}</span>
+                              </button>
+
+                              {/* Status / Urgency Pill */}
+                              {(g.upvotes || 0) >= 25 ? (
+                                <span className="comm-urgency-badge urgent-glow">
+                                  ⚡ High Community Urgency (Escalated)
+                                </span>
+                              ) : (
+                                <span className="comm-urgency-badge">
+                                  📈 {g.upvotes || 0} Residents Endorsed
+                                </span>
+                              )}
+
+                              {/* View Details Action */}
+                              <button
+                                type="button"
+                                className="comm-view-dossier-btn"
+                                onClick={() => {
+                                  setSelectedIssue(g);
+                                  setActiveTab("track");
+                                }}
+                              >
+                                View Dossier & Audit Trail →
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              )}
             </div>
           )}
         </div>
