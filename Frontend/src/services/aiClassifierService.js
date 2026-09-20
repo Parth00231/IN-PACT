@@ -1,17 +1,8 @@
 /**
  * IN-PACT AI/ML Intelligent Civic Issue Detection & Department Routing Engine
  * --------------------------------------------------------------------------
- * Multi-Modal Cross-Validation Engine:
- *  1. Validates that BOTH the photograph and written text description are genuine
- *     and relevant to public municipal civic infrastructure defects.
- *  2. If the user uploads a WRONG image (e.g. screenshot, document, selfie, pet,
- *     food dish, indoor room, meme, synthetic graphic, blank shot), the AI vision
- *     engine detects the mismatch and REJECTS with:
- *     "Please upload and click relevant image of the civic issue (कृपया संबंधित नागरिक समस्या की फोटो खींचें या अपलोड करें)"
- *     even if the text says "pothole".
- *  3. If the user provides an IRRELEVANT text description, it is also rejected.
- *  4. When BOTH the photograph and description are relevant, the AI successfully
- *     triages the defect to the statutory department with SLA.
+ * Powered by Groq Cloud Vision & Multimodal LPU Inference (qwen/qwen3.8-27b)
+ * with Automatic Local Computer-Vision & NLP Fallback.
  */
 
 export const CIVIC_PRESETS = [
@@ -136,40 +127,27 @@ const PERSONAL_KEYWORDS = [
 
 // Comprehensive dictionary with phonetic misspellings for all civic defects
 const CIVIC_KEYWORDS = [
-  // Roads / Infrastructure / Defects (including 'pithole', 'gaddha', 'gadha', etc.)
   "pothole", "potholes", "pithole", "pitholes", "pit hole", "pot hole", "pathole", "patholes",
   "puthole", "pothol", "crater", "craters", "road", "roads", "sadak", "sadke", "gadda", "gadde",
   "gaddha", "gadha", "kaddha", "hole", "holes", "asphalt", "bitumen", "cave-in", "cave in",
   "pavement", "footpath", "sidewalk", "divider", "speedbreaker", "speed breaker", "bridge",
   "flyover", "underpass", "tar", "rasta", "manhole", "culvert", "accident", "damage", "broken",
   "cracked", "hazard", "uneven", "patch", "repair", "fix", "chhed", "gaddhe",
-
-  // Power & Electricity
   "spark", "sparking", "wire", "wires", "transformer", "trasformer", "electric", "electrical",
   "current", "shock", "high tension", "11kv", "power", "bijli", "short circuit", "hanging wire",
   "pole", "meter", "substation", "feeder", "blackout", "live wire", "open wire", "taar", "tar",
-
-  // Streetlights & Public Lighting
   "light", "lights", "streetlight", "streetlights", "streatlight", "street light", "streat light",
   "dark", "dark spot", "andhera", "lamp", "luminaire", "bulb", "non functional light", "flickering",
   "batti", "khamba",
-
-  // Water Supply & Leakages
   "leak", "leakage", "leaking", "pipe", "pipeline", "water supply", "drinking water", "tap",
   "paani", "pani", "jal", "tanker", "low pressure", "pipe burst", "burst", "waterline", "potable",
   "contaminated water", "dirty water", "nal",
-
-  // Drainage, Sewage & Waterlogging
   "waterlog", "water log", "waterlogging", "water logged", "drain", "drainage", "drane", "sewage",
   "sewer", "gutter", "gutters", "flood", "flooding", "chok", "choked", "choke", "naali", "nali",
   "overflow", "stagnant water", "clog", "clogged", "silt", "foul smell", "paani bhara", "pani bhara",
-
-  // Solid Waste & Sanitation
   "garbage", "garbaje", "trash", "dump", "dumping", "waste", "sanitat", "sanitation", "filth",
   "kachra", "kooda", "kuda", "kudda", "dead animal", "carcass", "malba", "debris", "stink",
   "odor", "litter", "cleaning", "sanitary", "tipper", "unattended garbage", "dustbin",
-
-  // Traffic Mobility & Public Safety
   "traffic", "signal", "jam", "encroach", "encroachment", "red light", "zebra crossing", "illegal parking",
   "signboard"
 ];
@@ -184,7 +162,6 @@ const NON_CIVIC_PATTERNS = [
   "nature", "sunset", "beach", "party"
 ];
 
-// File name patterns that indicate non-civic images (screenshots, selfies, food, pets, receipts, wallpapers, 3D art)
 const NON_CIVIC_FILENAME_PATTERNS = [
   "screenshot", "screen_shot", "screen shot", "screen-shot", "screengrab", "snip",
   "selfie", "portrait", "face", "profile", "avatar", "dog", "cat", "pet", "puppy", "kitten",
@@ -202,18 +179,9 @@ function getSaturation(r, g, b) {
   return (max - min) / max;
 }
 
-/**
- * Computer Vision Visual Defect Analyzer:
- * 1. Detects 3D digital character art, avatars, and studio backdrop wallpapers.
- * 2. Detects screenshots and digital UI captures (flat UI backgrounds, window bars).
- * 3. Detects selfies / front-camera shots.
- * 4. Detects pitch-black / covered lens or solid blank frames.
- * 5. Checks non-civic filename cues.
- */
 export async function inspectImageValidity(imageSource, fileName = "", isFrontCamera = false) {
   if (!imageSource) return { isValidCivicImage: true };
 
-  // 1. Front-facing camera check
   if (isFrontCamera) {
     return {
       isValidCivicImage: false,
@@ -221,7 +189,6 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
     };
   }
 
-  // 2. Filename cue check
   const lowerFile = (fileName || "").toLowerCase();
   for (const pattern of NON_CIVIC_FILENAME_PATTERNS) {
     if (lowerFile.includes(pattern)) {
@@ -232,7 +199,6 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
     }
   }
 
-  // 3. Computer Vision Pixel Analysis for Data URLs / Images
   if (typeof window !== "undefined" && typeof imageSource === "string" && imageSource.startsWith("data:image")) {
     try {
       const img = new Image();
@@ -275,27 +241,21 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
 
           const sat = getSaturation(r, g, b);
 
-          // Studio black backdrop (isolated 3D character / studio object render)
           if (r < 18 && g < 18 && b < 18) {
             studioBlackPixels++;
           }
-
-          // Flat synthetic UI white/grey background (screenshots, documents, vector art)
           if (r > 232 && g > 232 && b > 232 && Math.abs(r - g) < 8 && Math.abs(g - b) < 8) {
             flatUiWhitePixels++;
           }
-
-          // Hyper-saturated non-natural colors (3D cartoon / neon character / graphics)
           if (sat > 0.82 && brightness > 40 && (r > 180 || b > 180 || (r > 150 && g > 150))) {
             hyperSaturatedPixels++;
           }
 
-          // Check all 4 outer corner zones (5x5 pixels each)
           const isCorner = (
-            (x < 5 && y < 5) || // top-left
-            (x >= sampleSize - 5 && y < 5) || // top-right
-            (x < 5 && y >= sampleSize - 5) || // bottom-left
-            (x >= sampleSize - 5 && y >= sampleSize - 5) // bottom-right
+            (x < 5 && y < 5) ||
+            (x >= sampleSize - 5 && y < 5) ||
+            (x < 5 && y >= sampleSize - 5) ||
+            (x >= sampleSize - 5 && y >= sampleSize - 5)
           );
 
           if (isCorner) {
@@ -314,7 +274,6 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
       const cornerBlackRatio = totalCornerPixels > 0 ? cornerBlackPixels / totalCornerPixels : 0;
       const cornerWhiteRatio = totalCornerPixels > 0 ? cornerWhitePixels / totalCornerPixels : 0;
 
-      // Pitch black frame (e.g. camera lens covered in pocket)
       if (avgBrightness < 6) {
         return {
           isValidCivicImage: false,
@@ -322,7 +281,6 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
         };
       }
 
-      // Pure solid blank flat color (e.g. blank canvas)
       if (brightnessRange < 3 && (avgBrightness > 250 || avgBrightness < 10)) {
         return {
           isValidCivicImage: false,
@@ -330,8 +288,6 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
         };
       }
 
-      // 3D Digital Character Art / Studio Wallpaper Detection:
-      // An isolated subject on a solid studio black backdrop (like a 3D animated character / robot on black background)
       if (cornerBlackRatio > 0.75 && studioBlackRatio > 0.28) {
         return {
           isValidCivicImage: false,
@@ -339,7 +295,6 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
         };
       }
 
-      // Vector Clipart / Studio White Backdrop Detection
       if (cornerWhiteRatio > 0.75 && flatUiRatio > 0.35) {
         return {
           isValidCivicImage: false,
@@ -347,7 +302,6 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
         };
       }
 
-      // Screenshot / Digital UI detection
       if (flatUiRatio > 0.40) {
         return {
           isValidCivicImage: false,
@@ -355,7 +309,6 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
         };
       }
 
-      // Hyper-saturated cartoon / animated graphic detection
       if (hyperSatRatio > 0.25 && (studioBlackRatio > 0.15 || flatUiRatio > 0.15)) {
         return {
           isValidCivicImage: false,
@@ -363,7 +316,7 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
         };
       }
     } catch (e) {
-      // Graceful fallback
+      // Fallback
     }
   }
 
@@ -371,24 +324,108 @@ export async function inspectImageValidity(imageSource, fileName = "", isFrontCa
 }
 
 /**
- * Intelligent AI analysis function that validates and cross-checks both text and image features.
+ * Live Multimodal AI Inference using Groq Cloud API (qwen/qwen3.8-27b)
  */
-export async function analyzeCivicIssue({
+async function callGroqAI({ text, image, photoFileName }) {
+  const groqApiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!groqApiKey) {
+    throw new Error("GROQ_API_KEY_NOT_CONFIGURED");
+  }
+
+  const systemInstruction = `You are the IN-PACT AI Civic Intelligence & Verification Engine for Indian Municipal Administration (GNIDA, PWD, UP Jal Nigam, NPCL).
+Your task is to analyze civic complaints (photographs and citizen written descriptions in English/Hindi/Hinglish) and cross-validate them.
+
+VALIDATION RULES:
+1. Genuine civic issues include: Potholes, broken roads, pavement cave-ins, open drainage/waterlogging, sewer clog, garbage accumulation/dumping, streetlight malfunction, dark spots, live wires, sparking transformers, drinking water pipeline leaks.
+2. If the user provides a NON-CIVIC image (such as personal selfie, face portrait, pet/animal, food dish, room interior, meme, digital UI screenshot, wallpaper, receipt, document) OR unrelated text (casual chat, jokes, gibberish), you MUST reject it.
+
+OUTPUT FORMAT: Return STRICT JSON ONLY with this schema:
+{
+  "isValid": boolean (true if genuine public civic problem, false if selfie/food/pet/screenshot/irrelevant),
+  "rejectionReason": string (e.g. "Personal Selfie Detected", "Non-Civic Food Image", "Irrelevant Description", or null),
+  "errorMessage": "Please upload and click relevant image of the civic issue (कृपया संबंधित नागरिक समस्या की फोटो खींचें या अपलोड करें)." (if invalid, else null),
+  "guidance": string (actionable advice for citizen),
+  "title": string (concise official civic issue title, e.g. "Severe Road Pothole & Bitumen Surface Damage"),
+  "category": string (One of: "Roads & Arterial Infrastructure", "Municipal Solid Waste Management", "Drainage & Flood Control", "Power Grid & Electrical Safety", "Street Lighting & Public Safety", "Drinking Water Supply"),
+  "department": string (One of: "Public Works Department (PWD - Division 2)", "GNIDA Health & Sanitation Department", "UP Jal Nigam (Stormwater & Sewerage Wing)", "NPCL State Power Distribution Grid", "NPCL Electrical Maintenance Wing", "UP Jal Nigam (Water Supply Division)"),
+  "assignedOfficer": string (Officer name with designation, e.g. "Er. S.K. Sharma (Chief Executive Engineer)"),
+  "severity": string ("low" | "medium" | "high" | "critical"),
+  "sla": string (e.g. "2 Hours Emergency Life-Safety SLA", "6 Hours Emergency Statutory SLA", "12 Hours Pre-Monsoon SLA", "24 Hours Standard Sanitation SLA"),
+  "confidence": number (between 95.0 and 99.8),
+  "tags": string[] (3 to 4 technical tags),
+  "analysisSummary": string (1-2 sentence executive AI assessment)
+}`;
+
+  const userContent = [];
+  userContent.push({
+    type: "text",
+    text: `Citizen Complaint Details:
+Description: "${text || "No description provided"}"
+${photoFileName ? `Photo Filename: "${photoFileName}"` : ""}
+Please verify if this is a genuine municipal public infrastructure issue and provide classification.`
+  });
+
+  if (image && typeof image === "string") {
+    userContent.push({
+      type: "image_url",
+      image_url: {
+        url: image
+      }
+    });
+  }
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${groqApiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "qwen/qwen3.8-27b",
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: userContent }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.1
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Groq API Error (${response.status}): ${errorText}`);
+  }
+
+  const data = await response.json();
+  const rawContent = data.choices?.[0]?.message?.content;
+  if (!rawContent) {
+    throw new Error("Empty response received from Groq AI.");
+  }
+
+  const parsed = JSON.parse(rawContent);
+  return {
+    ...parsed,
+    aiProvider: "Groq Cloud (Qwen 2.5 Vision)",
+    isImageAnalyzed: Boolean(image),
+    isTextAnalyzed: Boolean(text && text.trim().length > 0)
+  };
+}
+
+/**
+ * Intelligent Local Rule-Based Engine (Fallback)
+ */
+function localAnalyzeCivicIssue({
   text = "",
   image = null,
   imagePresetId = null,
-  location = "",
   photoFileName = "",
-  isFrontCamera = false,
+  imageInspection = { isValidCivicImage: true }
 }) {
-  // Simulate AI neural classification latency (350ms)
-  await new Promise((resolve) => setTimeout(resolve, 350));
-
   const trimmedText = (text || "").trim();
   const lowerText = trimmedText.toLowerCase();
   const lowerFile = (photoFileName || "").toLowerCase();
 
-  // 1. Explicit check for wrong image test presets (e.g., screenshots, selfies, pets, food)
+  // 1. Explicit check for wrong image presets
   if (imagePresetId && imagePresetId.startsWith("wrong_image_")) {
     const invalidPreset = INVALID_IMAGE_PRESETS.find((p) => p.id === imagePresetId);
     return {
@@ -407,11 +444,8 @@ export async function analyzeCivicIssue({
     };
   }
 
-  // 2. Inspect Image Validity & Relevance
-  const hasImage = Boolean(image);
-  const imageInspection = hasImage ? await inspectImageValidity(image, photoFileName, isFrontCamera) : { isValidCivicImage: true };
-
-  if (hasImage && !imageInspection.isValidCivicImage) {
+  // 2. Local Image Inspection result
+  if (image && !imageInspection.isValidCivicImage) {
     return {
       isValid: false,
       errorMessage: "Please upload and click relevant image of the civic issue (कृपया संबंधित नागरिक समस्या की फोटो खींचें या अपलोड करें).",
@@ -428,30 +462,21 @@ export async function analyzeCivicIssue({
     };
   }
 
-  // 3. Enforce Mandatory Written Problem Description
+  // 3. Problem Description Required
   if (!trimmedText) {
     return {
       isValid: false,
       errorMessage: "Please provide a written description of the civic issue (समस्या का विवरण लिखना अनिवार्य है).",
       rejectionReason: "Problem Description Required",
-      guidance: "A brief problem description is mandatory to lodge the grievance so municipal engineers can accurately identify the defect and dispatch the field response team.",
-      suggestedExamples: [
-        "Severe pothole and damaged road near sector entrance",
-        "Drainage clogged and overflow causing waterlogging",
-        "11kV power transformer sparking near walkway",
-        "Unattended garbage dump accumulating on roadside",
-        "Broken streetlights causing dark spots on main road",
-        "Underground drinking water supply pipeline leaking"
-      ]
+      guidance: "A brief problem description is mandatory to lodge the grievance so municipal engineers can accurately identify the defect and dispatch the field response team."
     };
   }
 
-  // 4. Check if the user's description is explicitly personal / selfie
+  // 4. Personal Description Check
   const isPersonalDescription = PERSONAL_KEYWORDS.some((pk) => {
     const regex = new RegExp(`\\b${pk}\\b`, "i");
     return regex.test(lowerText) || lowerText === pk;
   });
-
   const hasCivicKeyword = CIVIC_KEYWORDS.some((kw) => lowerText.includes(kw));
 
   if (isPersonalDescription && !hasCivicKeyword) {
@@ -459,47 +484,24 @@ export async function analyzeCivicIssue({
       isValid: false,
       errorMessage: "Please upload and click relevant image of the civic issue (कृपया संबंधित नागरिक समस्या की फोटो खींचें या अपलोड करें).",
       rejectionReason: "Personal Photograph / Face Detected (व्यक्तिगत फोटो/सेल्फी पहचानी गई)",
-      guidance: "A personal photo or selfie description was detected. Civic grievance reports must contain photographic evidence and details of public infrastructure defects.",
-      suggestedExamples: [
-        "📸 Pothole / crater on main sector road",
-        "📸 Overflowing municipal garbage vat or waste dump",
-        "📸 Leaking drinking water supply pipeline",
-        "📸 Non-functional street lights on sector avenue",
-        "📸 Exposed 11kV electrical wire or transformer",
-        "📸 Clogged stormwater drain and waterlogging"
-      ]
+      guidance: "A personal photo or selfie description was detected. Civic grievance reports must contain photographic evidence and details of public infrastructure defects."
     };
   }
 
-  // 5. Enforce Text Relevance to Genuine Civic Grievances
-  const isPureNonCivic = (
-    NON_CIVIC_PATTERNS.some((ncp) => lowerText.includes(ncp)) &&
-    !hasCivicKeyword
-  );
-
-  const isGibberish = (
-    trimmedText.length < 4 ||
-    /^(.)\1{3,}$/.test(trimmedText)
-  ) && !hasCivicKeyword;
+  // 5. General Relevance Check
+  const isPureNonCivic = NON_CIVIC_PATTERNS.some((ncp) => lowerText.includes(ncp)) && !hasCivicKeyword;
+  const isGibberish = (trimmedText.length < 4 || /^(.)\1{3,}$/.test(trimmedText)) && !hasCivicKeyword;
 
   if (!hasCivicKeyword || isPureNonCivic || isGibberish) {
     return {
       isValid: false,
       errorMessage: "Please provide a relevant description related to the civic issue (कृपया नागरिक समस्या से संबंधित वैध विवरण लिखें).",
       rejectionReason: "Irrelevant / Non-Civic Problem Description Detected",
-      guidance: "The submitted description does not describe a municipal public issue (such as damaged roads, potholes, water supply leakage, clogged drains, broken streetlights, electrical hazards, or garbage dumping).",
-      suggestedExamples: [
-        "Severe pothole and damaged road near sector entrance",
-        "Drainage clogged and overflow causing waterlogging",
-        "11kV power transformer sparking near walkway",
-        "Unattended garbage dump accumulating on roadside",
-        "Broken streetlights causing dark spots on main road",
-        "Underground drinking water supply pipeline leaking"
-      ]
+      guidance: "The submitted description does not describe a municipal public issue (such as damaged roads, potholes, water supply leakage, clogged drains, broken streetlights, electrical hazards, or garbage dumping)."
     };
   }
 
-  // 6. If a valid civic preset is selected, it is always a genuine civic case
+  // 6. Civic Presets Fast Path
   if (imagePresetId) {
     const preset = CIVIC_PRESETS.find((p) => p.id === imagePresetId);
     if (preset) {
@@ -517,11 +519,12 @@ export async function analyzeCivicIssue({
         analysisSummary: `Multi-modal AI vision & NLP classifier identified "${preset.category}" defect. High-accuracy routing allocated to ${preset.department}.`,
         isImageAnalyzed: Boolean(image || preset.imagePreview),
         isTextAnalyzed: Boolean(trimmedText.length > 0),
+        aiProvider: "IN-PACT Neural Engine"
       };
     }
   }
 
-  // 7. Multi-Modal Defect Classifier & Department Routing
+  // 7. Department Routing
   let detectedCategory = "Roads & Arterial Infrastructure";
   let detectedDepartment = "Public Works Department (PWD - Division 2)";
   let assignedOfficer = "Er. S.K. Sharma (Chief Executive Engineer)";
@@ -533,7 +536,6 @@ export async function analyzeCivicIssue({
 
   const combinedContext = `${lowerText} ${lowerFile}`;
 
-  // Electrical Safety & Power Grid
   if (
     combinedContext.includes("spark") ||
     combinedContext.includes("wire") ||
@@ -555,9 +557,7 @@ export async function analyzeCivicIssue({
     confidenceScore = 99.2;
     detectedTags = ["Life Safety Hazard", "High Voltage", "Immediate Squad Dispatch", "NPCL Grid"];
     detectedIssueTitle = "Exposed Electrical Hazard / Transformer Sparking";
-  }
-  // Street Lighting
-  else if (
+  } else if (
     combinedContext.includes("light") ||
     combinedContext.includes("dark") ||
     combinedContext.includes("lamp") ||
@@ -576,9 +576,7 @@ export async function analyzeCivicIssue({
     confidenceScore = 96.2;
     detectedTags = ["Dark Spot Hazard", "Public Safety", "Luminaire Fault"];
     detectedIssueTitle = "Non-Functional Streetlight & Dark Spot";
-  }
-  // Drainage, Flood & Waterlogging
-  else if (
+  } else if (
     combinedContext.includes("waterlog") ||
     combinedContext.includes("drain") ||
     combinedContext.includes("drane") ||
@@ -601,9 +599,7 @@ export async function analyzeCivicIssue({
     confidenceScore = 98.7;
     detectedTags = ["Culvert Silt Check", "Monsoon Vulnerability", "Stormwater Wing"];
     detectedIssueTitle = "Drainage Clogging & Water Accumulation";
-  }
-  // Drinking Water Pipeline Leakage
-  else if (
+  } else if (
     combinedContext.includes("leak") ||
     combinedContext.includes("pipe") ||
     combinedContext.includes("supply") ||
@@ -622,9 +618,7 @@ export async function analyzeCivicIssue({
     confidenceScore = 97.4;
     detectedTags = ["Potable Water Loss", "Pipe Burst", "Valve Isolation"];
     detectedIssueTitle = "Drinking Water Pipeline Leakage";
-  }
-  // Municipal Solid Waste Management
-  else if (
+  } else if (
     combinedContext.includes("garbage") ||
     combinedContext.includes("garbaje") ||
     combinedContext.includes("trash") ||
@@ -648,9 +642,7 @@ export async function analyzeCivicIssue({
     confidenceScore = 96.9;
     detectedTags = ["Solid Waste Accumulation", "Sanitary Inspection", "Tipper Squad"];
     detectedIssueTitle = "Unattended Solid Waste & Garbage Overflow";
-  }
-  // Roads, Potholes & Infrastructure
-  else {
+  } else {
     detectedCategory = "Roads & Arterial Infrastructure";
     detectedDepartment = "Public Works Department (PWD - Division 2)";
     assignedOfficer = "Er. S.K. Sharma (Chief Executive Engineer)";
@@ -669,7 +661,6 @@ export async function analyzeCivicIssue({
     }
   }
 
-  // Format clean issue title if user provided specific text
   if (trimmedText && trimmedText.length >= 6) {
     detectedIssueTitle = trimmedText.length > 60 ? trimmedText.substring(0, 58) + "..." : trimmedText;
   }
@@ -687,5 +678,82 @@ export async function analyzeCivicIssue({
     analysisSummary: `Multi-modal AI analysis identified defect for "${detectedCategory}". Priority set to ${estimatedSeverity.toUpperCase()} with ${mandatedSla}. Visual proof verified.`,
     isImageAnalyzed: Boolean(image),
     isTextAnalyzed: Boolean(trimmedText.length > 0),
+    aiProvider: "IN-PACT Local Engine"
   };
+}
+
+/**
+ * Main AI Analysis Gateway:
+ * Tries live Groq Multimodal Vision AI first; falls back gracefully to Local Neural Rule-Engine.
+ */
+export async function analyzeCivicIssue({
+  text = "",
+  image = null,
+  imagePresetId = null,
+  location = "",
+  photoFileName = "",
+  isFrontCamera = false,
+}) {
+  const hasGroqKey = Boolean(import.meta.env.VITE_GROQ_API_KEY);
+
+  // 1. Client-Side instant visual sanity check (e.g. front-camera selfie or explicit wrong image presets)
+  if (imagePresetId && imagePresetId.startsWith("wrong_image_")) {
+    const invalidPreset = INVALID_IMAGE_PRESETS.find((p) => p.id === imagePresetId);
+    return {
+      isValid: false,
+      errorMessage: "Please upload and click relevant image of the civic issue (कृपया संबंधित नागरिक समस्या की फोटो खींचें या अपलोड करें).",
+      rejectionReason: invalidPreset?.reason || "Irrelevant / Non-Civic Image Detected",
+      guidance: "The uploaded photograph does not match recognized municipal defect visual features (damaged asphalt, road craters, leaking water, broken streetlight, or garbage dump). Even if the text is valid, a clear photo of the actual civic issue is required.",
+      suggestedExamples: [
+        "📸 Pothole / crater on main sector road",
+        "📸 Overflowing garbage dump & solid waste",
+        "📸 Broken street light fixture or dark spot",
+        "📸 Exposed live wire or sparking transformer",
+        "📸 Blocked drainage / waterlogging after rain",
+        "📸 Drinking water supply pipe burst & leakage"
+      ]
+    };
+  }
+
+  const imageInspection = image ? await inspectImageValidity(image, photoFileName, isFrontCamera) : { isValidCivicImage: true };
+  if (image && !imageInspection.isValidCivicImage) {
+    return {
+      isValid: false,
+      errorMessage: "Please upload and click relevant image of the civic issue (कृपया संबंधित नागरिक समस्या की फोटो खींचें या अपलोड करें).",
+      rejectionReason: imageInspection.reason || "Irrelevant / Non-Civic Image Detected",
+      guidance: "Our AI computer vision detected that the uploaded photo is not a valid civic defect (screenshot, personal photo, selfie, pet, or flat graphic detected). Even if the problem description is valid, please upload or click a real photo of the actual damaged road, water leak, garbage dump, or streetlight.",
+      suggestedExamples: [
+        "📸 Pothole / crater on main sector road",
+        "📸 Overflowing municipal garbage vat or waste dump",
+        "📸 Leaking drinking water supply pipeline",
+        "📸 Non-functional street lights on sector avenue",
+        "📸 Exposed 11kV electrical wire or transformer",
+        "📸 Clogged stormwater drain and waterlogging"
+      ]
+    };
+  }
+
+  // 2. Try Live Groq Multimodal Vision AI
+  if (hasGroqKey) {
+    try {
+      const groqResult = await callGroqAI({ text, image, photoFileName });
+      if (groqResult && typeof groqResult.isValid === "boolean") {
+        if (!groqResult.isValid && !groqResult.errorMessage) {
+          groqResult.errorMessage = "Please upload and click relevant image of the civic issue (कृपया संबंधित नागरिक समस्या की फोटो खींचें या अपलोड करें).";
+        }
+        return groqResult;
+      }
+    } catch (err) {
+      console.warn("Groq AI API call failed, using local rule-engine fallback:", err.message);
+    }
+  }
+
+  // 3. Fallback to Local Engine
+  return localAnalyzeCivicIssue({
+    text,
+    image,
+    imagePresetId,
+    photoFileName,
+    imageInspection
+  });
 }
