@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import StatCard from "../components/StatCard";
 import MapView from "../components/MapView";
-import inpactLogo from "../assets/inpact-icon.svg";
 
 export default function Home({ navigateTo }) {
   // Reference search state for live tracking
@@ -211,15 +210,6 @@ export default function Home({ navigateTo }) {
       <section className="gov-hero-section">
         <div className="gov-container hero-grid">
           <div className="hero-text-col">
-            <div className="hero-brand-pill">
-              <img src={inpactLogo} alt="IN-PACT Logomark" className="hero-logomark" />
-              <div className="hero-brand-pill-text">
-                <span className="pill-brand-title">IN-PACT</span>
-                <span className="pill-brand-divider">•</span>
-                <span className="pill-brand-gov">GOVT. OF INDIA & GNIDA</span>
-              </div>
-            </div>
-
             <h1 className="hero-main-title">
               Indian Public Action and Civic Tracking
             </h1>
