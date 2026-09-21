@@ -33,7 +33,8 @@ import {
   ArrowRight,
   Activity,
   Layers,
-  Copy
+  Copy,
+  Edit3
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import StatCard from "../components/StatCard";
@@ -43,6 +44,15 @@ import { getMyIssues, getIssues, createIssue, toggleUpvote, getStats } from "../
 import { analyzeCivicIssue, CIVIC_PRESETS, INVALID_IMAGE_PRESETS } from "../services/aiClassifierService";
 import { getLiveDeviceLocation } from "../services/locationService";
 import { generateReferenceNumber, saveGrievanceHistory } from "../utils/referenceNumber";
+
+const POPULAR_MUNICIPAL_LANDMARKS = [
+  { name: "Pari Chowk Central Hub", ward: "Ward 1 - Pari Chowk Central Zone", gps: "28.4650° N, 77.5090° E" },
+  { name: "Knowledge Park III Institutional Belt", ward: "Ward 12 - Knowledge Park III", gps: "28.4682° N, 77.5028° E" },
+  { name: "Sector Alpha 1 Commercial Complex", ward: "Ward 5 - Sector Alpha 1 & 2", gps: "28.4721° N, 77.5112° E" },
+  { name: "Sector Beta 2 Market Corridor", ward: "Ward 8 - Sector Beta 1 & 2", gps: "28.4610° N, 77.5190° E" },
+  { name: "Sector Delta 2 Green Park Avenue", ward: "Ward 9 - Sector Delta 1 & 2", gps: "28.4890° N, 77.5250° E" },
+  { name: "Surajpur Chowk Crossing", ward: "Ward 1 - Pari Chowk Central Zone", gps: "28.4980° N, 77.4920° E" },
+];
 
 export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [activeTab, setActiveTab] = useState("overview"); // overview | report | track | map | community
@@ -59,6 +69,9 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
   const [formGps, setFormGps] = useState("28.4682° N, 77.5028° E (Live Geotag)");
   const [isFetchingGps, setIsFetchingGps] = useState(false);
   const [locationAutoFetched, setLocationAutoFetched] = useState(false);
+  const [locationMode, setLocationMode] = useState("gps"); // "gps" | "manual"
+  const [isManualLocation, setIsManualLocation] = useState(false);
+  const [isEditingReviewLocation, setIsEditingReviewLocation] = useState(false);
 
   // Live Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -441,7 +454,11 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     setCameraError(null);
   };
 
-  const triggerAutoLocationFetch = async (preferredAddress = null, preferredWard = null) => {
+  const triggerAutoLocationFetch = async (preferredAddress = null, preferredWard = null, force = false) => {
+    // If user has already entered a custom manual location, do not overwrite unless forced
+    if (isManualLocation && !force && !preferredAddress) {
+      return;
+    }
     setIsFetchingGps(true);
     try {
       const loc = await getLiveDeviceLocation();
@@ -642,6 +659,9 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
     setSelectedPresetId(null);
     setAiResult(null);
     setGeneratedRefId("");
+    setLocationMode("gps");
+    setIsManualLocation(false);
+    setIsEditingReviewLocation(false);
     setReportStep("input");
     setActiveTab("track");
   };
@@ -925,9 +945,43 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                           <div className="photo-preview-details">
                             <div className="file-info-row">
                               <span className="file-name-pill">{photoFileName || "civic_defect.jpg"}</span>
-                              <span className="geotag-auto-pill"><MapPin size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />{formGps}</span>
+                              <span className={isManualLocation ? "geotag-manual-pill" : "geotag-auto-pill"}>
+                                <MapPin size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
+                                {isManualLocation ? `Manual: ${formLocation}` : formGps}
+                              </span>
                             </div>
-                            <p className="photo-ai-ready-text"><Sparkles size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> Visual evidence ready for AI multi-modal classification.</p>
+
+                            {/* Photo Location Attached & Quick Manual Edit Option */}
+                            <div className="photo-location-notice-box">
+                              <div className="photo-location-info-line">
+                                <span className="loc-label-bold">
+                                  {isManualLocation ? "📍 Custom Location:" : "📍 GPS Location:"}
+                                </span>
+                                <span className="loc-val-text">{formLocation} ({formWard})</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="photo-edit-location-btn"
+                                onClick={() => {
+                                  setLocationMode("manual");
+                                  setIsManualLocation(true);
+                                  const el = document.getElementById("location-input-field");
+                                  if (el) {
+                                    el.focus();
+                                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  }
+                                }}
+                                title="Click to manually set or edit the exact landmark/address of the issue"
+                              >
+                                <Edit3 size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
+                                {isManualLocation ? "Edit Location" : "Add Location Manually"}
+                              </button>
+                            </div>
+
+                            <p className="photo-ai-ready-text">
+                              <Sparkles size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
+                              Visual evidence ready for AI multi-modal classification.
+                            </p>
                             <div className="photo-action-buttons">
                               <button
                                 type="button"
@@ -1053,61 +1107,159 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       </div>
                     )}
 
-                    {/* 3. LOCATION & WARD */}
-                    <div className="form-grid-2">
-                      <div className="gov-form-group">
-                        <div className="label-with-action-row">
-                          <label className="gov-form-label">
-                            <span>Exact Location & Landmark (स्थान / लैंडमार्क) *</span>
-                            {locationAutoFetched && (
-                              <span className="gps-auto-success-pill"><CheckCircle2 size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> GPS Auto-Mapped</span>
-                            )}
-                          </label>
+                    {/* 3. LOCATION & WARD SECTION WITH MANUAL / GPS DUAL MODE */}
+                    <div className="location-selection-wrapper">
+                      <div className="location-section-header">
+                        <label className="gov-form-label mb-0">
+                          <span>Location of Issue (समस्या का स्थान) *</span>
+                          <span className="label-sub-tag">
+                            {locationMode === "manual" ? "Manual Custom Location" : "Live Device GPS"}
+                          </span>
+                        </label>
+
+                        {/* Location Mode Switcher */}
+                        <div className="location-mode-switcher">
                           <button
                             type="button"
-                            className="refetch-gps-btn"
-                            onClick={() => triggerAutoLocationFetch()}
-                            disabled={isFetchingGps}
-                            title="Re-fetch current device coordinates"
+                            className={`loc-mode-btn ${locationMode === "gps" ? "active" : ""}`}
+                            onClick={() => {
+                              setLocationMode("gps");
+                              setIsManualLocation(false);
+                              triggerAutoLocationFetch(null, null, true);
+                            }}
+                            title="Auto-fetch location from device GPS"
                           >
                             <Compass size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
-                            {isFetchingGps ? "Locating..." : "Re-fetch GPS"}
+                            Auto GPS
+                          </button>
+                          <button
+                            type="button"
+                            className={`loc-mode-btn ${locationMode === "manual" ? "active" : ""}`}
+                            onClick={() => {
+                              setLocationMode("manual");
+                              setIsManualLocation(true);
+                              const el = document.getElementById("location-input-field");
+                              if (el) el.focus();
+                            }}
+                            title="Enter or customize location manually"
+                          >
+                            <Edit3 size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
+                            Enter Manually
                           </button>
                         </div>
-                        <input
-                          type="text"
-                          className="gov-input"
-                          value={formLocation}
-                          onChange={(e) => setFormLocation(e.target.value)}
-                          placeholder="e.g. Knowledge Park III, Near Main Metro Corridor"
-                          required
-                        />
                       </div>
 
-                      <div className="gov-form-group">
-                        <label className="gov-form-label">Municipal Ward / Zone (वार्ड / जोन) *</label>
-                        <select
-                          className="gov-select"
-                          value={formWard}
-                          onChange={(e) => setFormWard(e.target.value)}
-                          required
-                        >
-                          <option value="Ward 12 - Knowledge Park III">Ward 12 - Knowledge Park III & Expressways</option>
-                          <option value="Ward 5 - Sector Alpha 1 & 2">Ward 5 - Sector Alpha 1 & 2 Commercial</option>
-                          <option value="Ward 8 - Sector Beta 1 & 2">Ward 8 - Sector Beta 1 & 2</option>
-                          <option value="Ward 9 - Sector Delta 1 & 2">Ward 9 - Sector Delta 1 & 2</option>
-                          <option value="Ward 1 - Pari Chowk Central Zone">Ward 1 - Pari Chowk Central Zone</option>
-                        </select>
-                      </div>
-                    </div>
+                      {locationMode === "manual" && (
+                        <div className="manual-location-banner">
+                          <span className="manual-badge">✍️ MANUAL ENTRY</span>
+                          <span>Specify the exact street, landmark, or municipal ward where the issue is located.</span>
+                        </div>
+                      )}
 
-                    {/* GPS Geotag Indicator */}
-                    <div className="geotag-live-strip">
-                      <div className="gps-indicator-item">
-                        <span className="gps-live-dot"><MapPin size={14} /></span>
-                        <span><strong>Live Geotag:</strong> {formGps}</span>
+                      <div className="form-grid-2">
+                        <div className="gov-form-group">
+                          <div className="label-with-action-row">
+                            <label className="gov-form-label" htmlFor="location-input-field">
+                              <span>Exact Location & Landmark (स्थान / लैंडमार्क) *</span>
+                              {locationMode === "gps" && locationAutoFetched && (
+                                <span className="gps-auto-success-pill">
+                                  <CheckCircle2 size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> GPS Auto-Mapped
+                                </span>
+                              )}
+                              {locationMode === "manual" && (
+                                <span className="manual-mode-pill">
+                                  <Edit3 size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> Manual Entry
+                                </span>
+                              )}
+                            </label>
+                            {locationMode === "gps" && (
+                              <button
+                                type="button"
+                                className="refetch-gps-btn"
+                                onClick={() => triggerAutoLocationFetch(null, null, true)}
+                                disabled={isFetchingGps}
+                                title="Re-fetch current device coordinates"
+                              >
+                                <Compass size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
+                                {isFetchingGps ? "Locating..." : "Re-fetch GPS"}
+                              </button>
+                            )}
+                          </div>
+                          <input
+                            id="location-input-field"
+                            type="text"
+                            className="gov-input"
+                            value={formLocation}
+                            onChange={(e) => {
+                              setFormLocation(e.target.value);
+                              setLocationMode("manual");
+                              setIsManualLocation(true);
+                            }}
+                            placeholder="e.g. Pari Chowk Roundabout, Gate 2 Alpha 1, KP-3 Campus"
+                            required
+                          />
+                        </div>
+
+                        <div className="gov-form-group">
+                          <label className="gov-form-label">Municipal Ward / Zone (वार्ड / जोन) *</label>
+                          <select
+                            className="gov-select"
+                            value={formWard}
+                            onChange={(e) => {
+                              setFormWard(e.target.value);
+                              setLocationMode("manual");
+                              setIsManualLocation(true);
+                            }}
+                            required
+                          >
+                            <option value="Ward 12 - Knowledge Park III">Ward 12 - Knowledge Park III & Expressways</option>
+                            <option value="Ward 5 - Sector Alpha 1 & 2">Ward 5 - Sector Alpha 1 & 2 Commercial</option>
+                            <option value="Ward 8 - Sector Beta 1 & 2">Ward 8 - Sector Beta 1 & 2</option>
+                            <option value="Ward 9 - Sector Delta 1 & 2">Ward 9 - Sector Delta 1 & 2</option>
+                            <option value="Ward 1 - Pari Chowk Central Zone">Ward 1 - Pari Chowk Central Zone</option>
+                          </select>
+                        </div>
                       </div>
-                      <span className="gps-status-badge"><ShieldCheck size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> Verified Municipal Boundary</span>
+
+                      {/* Quick Popular Municipal Landmark Chips */}
+                      <div className="quick-landmark-strip">
+                        <span className="quick-landmark-title">Popular Municipal Landmarks:</span>
+                        <div className="quick-landmark-chips">
+                          {POPULAR_MUNICIPAL_LANDMARKS.map((item, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className={`landmark-chip ${formLocation === item.name ? "selected" : ""}`}
+                              onClick={() => {
+                                setFormLocation(item.name);
+                                setFormWard(item.ward);
+                                setFormGps(`${item.gps} (Manual Landmark)`);
+                                setLocationMode("manual");
+                                setIsManualLocation(true);
+                              }}
+                            >
+                              <MapPin size={11} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
+                              {item.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* GPS / Manual Geotag Indicator */}
+                      <div className="geotag-live-strip">
+                        <div className="gps-indicator-item">
+                          <span className={locationMode === "manual" ? "gps-manual-dot" : "gps-live-dot"}>
+                            <MapPin size={14} />
+                          </span>
+                          <span>
+                            <strong>{locationMode === "manual" ? "Location Reference:" : "Live Geotag:"}</strong> {formGps}
+                          </span>
+                        </div>
+                        <span className="gps-status-badge">
+                          <ShieldCheck size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
+                          {locationMode === "manual" ? "Custom Landmark Set" : "Verified Municipal Boundary"}
+                        </span>
+                      </div>
                     </div>
 
                     {/* AI Invalid Grievance Feedback / Error Banner */}
@@ -1265,9 +1417,54 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       </div>
 
                       <div className="evidence-meta-box">
-                        <div><strong>Location:</strong> {formLocation}</div>
-                        <div><strong>Ward:</strong> {formWard}</div>
-                        <div><strong>GPS:</strong> {formGps}</div>
+                        <div className="review-meta-header-row">
+                          <span className="review-meta-title">Location & Ward:</span>
+                          <button
+                            type="button"
+                            className="review-edit-loc-toggle-btn"
+                            onClick={() => setIsEditingReviewLocation(!isEditingReviewLocation)}
+                          >
+                            <Edit3 size={11} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
+                            {isEditingReviewLocation ? "Done Editing" : "Edit Location"}
+                          </button>
+                        </div>
+
+                        {isEditingReviewLocation ? (
+                          <div className="review-loc-edit-form">
+                            <label className="review-edit-label">Landmark / Street:</label>
+                            <input
+                              type="text"
+                              className="gov-input review-edit-input"
+                              value={formLocation}
+                              onChange={(e) => {
+                                setFormLocation(e.target.value);
+                                setIsManualLocation(true);
+                              }}
+                              placeholder="Enter location"
+                            />
+                            <label className="review-edit-label" style={{ marginTop: "6px" }}>Ward / Zone:</label>
+                            <select
+                              className="gov-select review-edit-select"
+                              value={formWard}
+                              onChange={(e) => {
+                                setFormWard(e.target.value);
+                                setIsManualLocation(true);
+                              }}
+                            >
+                              <option value="Ward 12 - Knowledge Park III">Ward 12 - Knowledge Park III</option>
+                              <option value="Ward 5 - Sector Alpha 1 & 2">Ward 5 - Sector Alpha 1 & 2</option>
+                              <option value="Ward 8 - Sector Beta 1 & 2">Ward 8 - Sector Beta 1 & 2</option>
+                              <option value="Ward 9 - Sector Delta 1 & 2">Ward 9 - Sector Delta 1 & 2</option>
+                              <option value="Ward 1 - Pari Chowk Central Zone">Ward 1 - Pari Chowk Central Zone</option>
+                            </select>
+                          </div>
+                        ) : (
+                          <>
+                            <div><strong>Location:</strong> {formLocation}</div>
+                            <div><strong>Ward:</strong> {formWard}</div>
+                            <div><strong>GPS:</strong> {formGps}</div>
+                          </>
+                        )}
                       </div>
                     </div>
 

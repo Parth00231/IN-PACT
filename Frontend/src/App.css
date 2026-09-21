@@ -5345,6 +5345,66 @@ body.gov-high-contrast strong {
   font-weight: 600;
 }
 
+.geotag-manual-pill {
+  font-size: 11px;
+  color: #1D4ED8;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.photo-location-notice-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-location-info-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #1E293B;
+  flex-wrap: wrap;
+}
+
+.loc-label-bold {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.loc-val-text {
+  font-weight: 600;
+  color: #334155;
+}
+
+.photo-edit-location-btn {
+  background: #FFFFFF;
+  border: 1px solid var(--gov-border);
+  color: #0A2540;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.photo-edit-location-btn:hover {
+  background: #0A2540;
+  color: #FFFFFF;
+  border-color: #0A2540;
+}
+
 .photo-ai-ready-text {
   font-size: 12px;
   color: #059669;
@@ -5439,6 +5499,184 @@ body.gov-high-contrast strong {
   background: #2563EB;
   box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
   animation: pulse-dot 1.2s infinite;
+}
+
+/* Location Selection Wrapper & Mode Switcher */
+.location-selection-wrapper {
+  margin-bottom: 16px;
+}
+
+.location-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.location-mode-switcher {
+  display: flex;
+  background: #E2E8F0;
+  padding: 2px;
+  border-radius: 6px;
+  gap: 2px;
+}
+
+.loc-mode-btn {
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.loc-mode-btn.active {
+  background: #FFFFFF;
+  color: #0A2540;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.manual-location-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #166534;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  margin-bottom: 10px;
+  animation: fadeInSlide 0.2s ease;
+}
+
+.manual-badge {
+  font-weight: 800;
+  font-size: 10px;
+  background: #DCFCE7;
+  color: #15803D;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #86EFAC;
+}
+
+.manual-mode-pill {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Quick Landmark Chips */
+.quick-landmark-strip {
+  margin-top: -6px;
+  margin-bottom: 12px;
+}
+
+.quick-landmark-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748B;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.quick-landmark-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.landmark-chip {
+  background: #FFFFFF;
+  border: 1px solid var(--gov-border);
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  padding: 4px 9px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.landmark-chip:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.landmark-chip.selected {
+  background: #0A2540;
+  color: #FFFFFF;
+  border-color: #0A2540;
+}
+
+.gps-manual-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2563EB;
+}
+
+/* Review Mode Location Inline Edit */
+.review-meta-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.review-meta-title {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 12px;
+}
+
+.review-edit-loc-toggle-btn {
+  background: #F1F5F9;
+  border: 1px solid var(--gov-border);
+  color: #0A2540;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.review-edit-loc-toggle-btn:hover {
+  background: #E2E8F0;
+}
+
+.review-loc-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #FFFFFF;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--gov-border);
+  margin-top: 4px;
+}
+
+.review-edit-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.review-edit-input,
+.review-edit-select {
+  font-size: 12px;
+  padding: 4px 8px;
+  height: auto;
 }
 
 .label-with-action-row {
