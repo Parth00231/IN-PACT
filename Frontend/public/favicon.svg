@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1e36"/>
+      <stop offset="100%" stop-color="#050f1d"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Circle -->
+  <circle cx="64" cy="64" r="62" fill="url(#bgGrad)" stroke="#1e3a8a" stroke-width="2"/>
+
+  <!-- Golden Ring & Ticks -->
+  <circle cx="64" cy="64" r="54" fill="none" stroke="url(#goldGrad)" stroke-width="1.5" stroke-dasharray="1 8" stroke-linecap="round"/>
+  
+  <!-- Subtle Cardinal Golden Markers -->
+  <circle cx="64" cy="11" r="2.5" fill="#fcd34d"/>
+  <circle cx="64" cy="117" r="2.5" fill="#fcd34d"/>
+  <circle cx="11" cy="64" r="2.5" fill="#fcd34d"/>
+  <circle cx="117" cy="64" r="2.5" fill="#fcd34d"/>
+
+  <!-- Civic Monument / Pillars / Pediment in Crisp White & Gold -->
+  <!-- Triangular Roof Pediment -->
+  <path d="M40 50 L64 32 L88 50 Z" fill="#ffffff"/>
+  <!-- Roof Base Beam -->
+  <rect x="37" y="50" width="54" height="5" rx="1.5" fill="#f8fafc"/>
+  <!-- Central Emblem / Ashoka Accent Dot -->
+  <circle cx="64" cy="43" r="2.5" fill="#f59e0b"/>
+
+  <!-- 4 Pillars -->
+  <rect x="43" y="57" width="5.5" height="21" rx="1" fill="#ffffff"/>
+  <rect x="53" y="57" width="5.5" height="21" rx="1" fill="#ffffff"/>
+  <rect x="69.5" y="57" width="5.5" height="21" rx="1" fill="#ffffff"/>
+  <rect x="79.5" y="57" width="5.5" height="21" rx="1" fill="#ffffff"/>
+
+  <!-- Base Podium -->
+  <rect x="39" y="78" width="50" height="5" rx="1.5" fill="#f8fafc"/>
+  <rect x="36" y="83" width="56" height="4" rx="1.5" fill="#cbd5e1"/>
+
+  <!-- Tricolor Arc Base / Civic Flow Ribbon -->
+  <path d="M42 96 C49 104, 79 104, 86 96" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round"/>
+  <path d="M47 101 C52 107, 76 107, 81 101" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  <path d="M52 106 C56 110, 72 110, 76 106" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

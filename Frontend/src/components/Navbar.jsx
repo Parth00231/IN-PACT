@@ -69,7 +69,7 @@ export default function Navbar({ currentPage, navigateTo, currentUser, onLogout 
                 <span className="brand-name">IN-PACT</span>
                 <span className="brand-tag">GOVT. OF INDIA</span>
               </div>
-              <span className="brand-subtitle">Civic Action & Grievance Portal &bull; GNIDA</span>
+              <span className="brand-subtitle">Indian Public Action and Civic Tracking &bull; GNIDA</span>
             </div>
           </div>
 
