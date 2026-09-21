@@ -186,10 +186,16 @@ a:hover {
 }
 
 .brand-logo-img {
-  height: 38px;
-  width: 38px;
-  border-radius: 8px;
-  filter: drop-shadow(0 2px 4px rgba(10, 37, 64, 0.12));
+  height: 48px;
+  width: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(10, 37, 64, 0.16));
+  transition: transform 0.2s ease;
+}
+
+.brand-unified:hover .brand-logo-img {
+  transform: scale(1.05);
 }
 
 .brand-titles {
@@ -4323,6 +4329,21 @@ a:hover {
   margin-bottom: 4px;
 }
 
+.footer-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.footer-brand-logo {
+  height: 48px;
+  width: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+}
+
 .footer-brand-title h3 {
   font-size: 15px;
   font-weight: 800;
@@ -4705,8 +4726,9 @@ body.gov-high-contrast strong {
   }
 
   .brand-logo-img {
-    height: 30px;
-    width: 30px;
+    height: 38px;
+    width: 38px;
+    border-radius: 50%;
   }
 
   .brand-name {
