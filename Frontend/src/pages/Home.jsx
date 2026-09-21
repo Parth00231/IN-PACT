@@ -218,7 +218,7 @@ export default function Home({ navigateTo }) {
             </h2>
 
             <p className="hero-summary-text">
-              An integrated, transparent e-governance platform empowering citizens to register civic grievances across Greater Noida metropolis. Enabled with multi-modal AI classification, computer vision triage, and automated jurisdictional routing directly to designated Nodal Executive Engineers.
+              A modern, transparent platform for citizens to report civic grievances. Powered by AI for instant defect identification, automated triaging, and direct routing to concerned municipal engineers.
             </p>
 
             <div className="hero-action-buttons">

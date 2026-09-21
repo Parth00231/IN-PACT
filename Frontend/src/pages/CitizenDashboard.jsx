@@ -836,24 +836,21 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                 <div className={`stepper-step ${reportStep === "input" ? "active" : "completed"}`}>
                   <span className="step-num">{reportStep === "review" || reportStep === "success" ? <Check size={14} /> : "1"}</span>
                   <div className="step-text-wrap">
-                    <span className="step-title">Evidence & Details</span>
-                    <span className="step-sub">Camera / Text Input</span>
+                    <span className="step-title">1. Details & Photo</span>
                   </div>
                 </div>
                 <div className={`stepper-line ${reportStep === "review" || reportStep === "success" ? "filled" : ""}`}></div>
                 <div className={`stepper-step ${reportStep === "review" ? "active" : reportStep === "success" ? "completed" : ""}`}>
                   <span className="step-num">{reportStep === "success" ? <Check size={14} /> : "2"}</span>
                   <div className="step-text-wrap">
-                    <span className="step-title">AI Triaging & Routing</span>
-                    <span className="step-sub">Verify Department & SLA</span>
+                    <span className="step-title">2. AI Review</span>
                   </div>
                 </div>
                 <div className={`stepper-line ${reportStep === "success" ? "filled" : ""}`}></div>
                 <div className={`stepper-step ${reportStep === "success" ? "active" : ""}`}>
                   <span className="step-num">3</span>
                   <div className="step-text-wrap">
-                    <span className="step-title">Official Receipt</span>
-                    <span className="step-sub">Statutory Tracking ID</span>
+                    <span className="step-title">3. Confirmation</span>
                   </div>
                 </div>
               </div>
@@ -864,11 +861,11 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                   <div className="ai-report-header">
                     <div className="ai-badge-top">
                       <span className="ai-sparkle-icon"><Sparkles size={14} /></span>
-                      <span>SMART CIVIC REPORTING ENGINE</span>
+                      <span>SMART REPORTING</span>
                     </div>
-                    <h2>Lodge a Public Civic Grievance</h2>
+                    <h2>Lodge a Grievance</h2>
                     <p className="ai-header-sub">
-                      Capture live photos, upload images, or describe the defect. Our AI/ML triaging engine automatically determines the department, priority, and nodal engineer for your confirmation.
+                      Attach a photo or describe the issue. Our AI will automatically identify the defect and route it to the concerned department.
                     </p>
                   </div>
 
@@ -876,8 +873,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                     {/* 1. PHOTOGRAPH & CAMERA EVIDENCE SECTION */}
                     <div className="gov-form-group">
                       <label className="gov-form-label">
-                        <span>Photograph & Visual Evidence (लाइव कैमरा या फोटो)</span>
-                        <span className="label-sub-tag">AI Computer Vision Enabled</span>
+                        <span>Photo / Visual Evidence</span>
                       </label>
 
                       {/* Hidden File Input & Canvas for Frame Grabbing */}
@@ -955,7 +951,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                             <div className="photo-location-notice-box">
                               <div className="photo-location-info-line">
                                 <span className="loc-label-bold">
-                                  {isManualLocation ? "📍 Custom Location:" : "📍 GPS Location:"}
+                                  {isManualLocation ? "📍 Custom Location:" : "📍 Location:"}
                                 </span>
                                 <span className="loc-val-text">{formLocation} ({formWard})</span>
                               </div>
@@ -978,24 +974,20 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                               </button>
                             </div>
 
-                            <p className="photo-ai-ready-text">
-                              <Sparkles size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
-                              Visual evidence ready for AI multi-modal classification.
-                            </p>
                             <div className="photo-action-buttons">
                               <button
                                 type="button"
                                 className="retake-photo-btn"
                                 onClick={() => handleStartCamera("environment")}
                               >
-                                <Camera size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> Retake via Camera
+                                <Camera size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> Retake
                               </button>
                               <button
                                 type="button"
                                 className="replace-photo-btn"
                                 onClick={() => fileInputRef.current?.click()}
                               >
-                                <Upload size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> Replace File
+                                <Upload size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> Replace
                               </button>
                               <button
                                 type="button"
@@ -1016,10 +1008,9 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                               className="camera-launch-btn"
                               onClick={() => handleStartCamera("environment")}
                             >
-                              <span className="cam-icon-big"><Camera size={28} /></span>
+                              <span className="cam-icon-big"><Camera size={26} /></span>
                               <div className="cam-btn-text">
-                                <strong>Take Live Photo with Camera</strong>
-                                <span>Capture live photo of the civic defect</span>
+                                <strong>Take Live Photo</strong>
                               </div>
                             </button>
 
@@ -1028,17 +1019,16 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                               className="upload-file-btn"
                               onClick={() => fileInputRef.current?.click()}
                             >
-                              <span className="upload-icon-big"><Upload size={28} /></span>
+                              <span className="upload-icon-big"><Upload size={26} /></span>
                               <div className="cam-btn-text">
-                                <strong>Upload from Gallery / Files</strong>
-                                <span>JPEG, PNG, WEBP supported</span>
+                                <strong>Upload from Files</strong>
                               </div>
                             </button>
                           </div>
 
                           {/* Quick Test Civic Defect Presets */}
                           <div className="preset-selector-strip">
-                            <span className="preset-label-text">Or choose a civic defect preset (or test wrong image validation):</span>
+                            <span className="preset-label-text">Quick Samples:</span>
                             <div className="preset-chip-list">
                               {CIVIC_PRESETS.map((preset) => (
                                 <button
@@ -1083,14 +1073,13 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                     {/* 2. PROBLEM DESCRIPTION SECTION (MANDATORY) */}
                     <div className="gov-form-group">
                       <label className="gov-form-label">
-                        <span>Problem Description (समस्या का पूरा विवरण) *</span>
-                        <span className="label-sub-tag" style={{ color: "#E11D48", fontWeight: 700 }}>* Mandatory • Multilingual NLP</span>
+                        <span>Problem Description *</span>
                       </label>
                       <textarea
                         className="gov-textarea"
                         rows={3}
                         required
-                        placeholder="Describe the defect (e.g. Deep pothole causing accidents near metro pillar 42, sparking 11kV transformer, stormwater drain overflow, garbage dump on road)..."
+                        placeholder="Briefly describe the civic issue (e.g. deep pothole near metro station, broken streetlight, overflowing drain)..."
                         value={formDescription}
                         onChange={(e) => {
                           setFormDescription(e.target.value);
@@ -1103,7 +1092,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                     {isFetchingGps && (
                       <div className="gps-fetching-alert">
                         <span className="gps-pulse-ping"><Compass size={16} /></span>
-                        <span>Extracting Geolocation & Address from image/device...</span>
+                        <span>Fetching Geolocation & Address...</span>
                       </div>
                     )}
 
@@ -1111,10 +1100,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                     <div className="location-selection-wrapper">
                       <div className="location-section-header">
                         <label className="gov-form-label mb-0">
-                          <span>Location of Issue (समस्या का स्थान) *</span>
-                          <span className="label-sub-tag">
-                            {locationMode === "manual" ? "Manual Custom Location" : "Live Device GPS"}
-                          </span>
+                          <span>Location of Issue *</span>
                         </label>
 
                         {/* Location Mode Switcher */}
@@ -1149,18 +1135,11 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                         </div>
                       </div>
 
-                      {locationMode === "manual" && (
-                        <div className="manual-location-banner">
-                          <span className="manual-badge">✍️ MANUAL ENTRY</span>
-                          <span>Specify the exact street, landmark, or municipal ward where the issue is located.</span>
-                        </div>
-                      )}
-
                       <div className="form-grid-2">
                         <div className="gov-form-group">
                           <div className="label-with-action-row">
                             <label className="gov-form-label" htmlFor="location-input-field">
-                              <span>Exact Location & Landmark (स्थान / लैंडमार्क) *</span>
+                              <span>Exact Landmark / Address *</span>
                               {locationMode === "gps" && locationAutoFetched && (
                                 <span className="gps-auto-success-pill">
                                   <CheckCircle2 size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> GPS Auto-Mapped
@@ -1201,7 +1180,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                         </div>
 
                         <div className="gov-form-group">
-                          <label className="gov-form-label">Municipal Ward / Zone (वार्ड / जोन) *</label>
+                          <label className="gov-form-label">Municipal Ward / Zone *</label>
                           <select
                             className="gov-select"
                             value={formWard}
@@ -1223,7 +1202,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
 
                       {/* Quick Popular Municipal Landmark Chips */}
                       <div className="quick-landmark-strip">
-                        <span className="quick-landmark-title">Popular Municipal Landmarks:</span>
+                        <span className="quick-landmark-title">Popular Landmarks:</span>
                         <div className="quick-landmark-chips">
                           {POPULAR_MUNICIPAL_LANDMARKS.map((item, idx) => (
                             <button
@@ -1252,12 +1231,12 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                             <MapPin size={14} />
                           </span>
                           <span>
-                            <strong>{locationMode === "manual" ? "Location Reference:" : "Live Geotag:"}</strong> {formGps}
+                            <strong>{locationMode === "manual" ? "Location Ref:" : "Live Geotag:"}</strong> {formGps}
                           </span>
                         </div>
                         <span className="gps-status-badge">
                           <ShieldCheck size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
-                          {locationMode === "manual" ? "Custom Landmark Set" : "Verified Municipal Boundary"}
+                          {locationMode === "manual" ? "Custom Landmark" : "GPS Verified"}
                         </span>
                       </div>
                     </div>
@@ -1364,12 +1343,12 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                         {isAiAnalyzing ? (
                           <>
                             <span className="spinner-circle"></span>
-                            <span>Running Multi-Modal AI Detection & Department Routing...</span>
+                            <span>Analyzing & Routing...</span>
                           </>
                         ) : (
                           <>
-                            <Sparkles size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "6px" }} />
-                            <span>Run AI Diagnostic & Triage (समस्या का AI विश्लेषण करें)</span>
+                            <Sparkles size={17} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "6px" }} />
+                            <span>Analyze & Review Grievance</span>
                             <ArrowRight size={16} style={{ display: "inline-block", verticalAlign: "middle", marginLeft: "6px" }} />
                           </>
                         )}
@@ -1387,11 +1366,11 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       <span className="ai-glow-icon"><Sparkles size={18} /></span>
                       <div>
                         <div className="review-tag-row">
-                          <span className="ai-verified-tag">AI MULTI-MODAL ANALYSIS COMPLETE</span>
+                          <span className="ai-verified-tag">AI ANALYSIS READY</span>
                           <span className="ai-confidence-pill">{aiResult.confidence}% Confidence</span>
                         </div>
-                        <h3>Review & Confirm Grievance Triaging</h3>
-                        <p>Our AI system has identified the defect and allocated the statutory department. Please verify the findings before submitting.</p>
+                        <h3>Review & Confirm Grievance</h3>
+                        <p>Verify the assigned category, department, and priority before submitting.</p>
                       </div>
                     </div>
                   </div>
@@ -1399,11 +1378,11 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                   <div className="ai-review-body-grid">
                     {/* Left Evidence Column */}
                     <div className="review-evidence-col">
-                      <h4>Multi-Modal Evidence Attached</h4>
+                      <h4>Attached Evidence</h4>
                       {photoPreview ? (
                         <div className="review-photo-box">
                           <img src={photoPreview} alt="Evidence" className="review-img-thumb" />
-                          <div className="evidence-badge-overlay">Geotagged Photo Evidence</div>
+                          <div className="evidence-badge-overlay">Photo Evidence Attached</div>
                         </div>
                       ) : (
                         <div className="no-photo-placeholder">
@@ -1412,8 +1391,8 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       )}
 
                       <div className="evidence-desc-box">
-                        <span className="k-title">Citizen Description:</span>
-                        <p>{formDescription || "No text description entered (Visual evidence provided)."}</p>
+                        <span className="k-title">Description:</span>
+                        <p>{formDescription || "No text description entered."}</p>
                       </div>
 
                       <div className="evidence-meta-box">
@@ -1552,7 +1531,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                         </div>
 
                         <div className="verdict-row">
-                          <span className="v-label">Mandated SLA Timer:</span>
+                          <span className="v-label">Target SLA:</span>
                           <strong className="v-value text-saffron"><Clock size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> {confirmedSla}</strong>
                         </div>
                       </div>
@@ -1560,7 +1539,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       {/* Detected Hazard Tags */}
                       {aiResult.tags && aiResult.tags.length > 0 && (
                         <div className="detected-tags-strip">
-                          <span className="tags-label">Detected Infrastructure Tags:</span>
+                          <span className="tags-label">Detected Tags:</span>
                           <div className="tags-pill-list">
                             {aiResult.tags.map((tag, i) => (
                               <span key={i} className="hazard-tag-pill">#{tag}</span>
@@ -1585,7 +1564,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                           disabled={isAiAnalyzing}
                         >
                           <RefreshCw size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
-                          Modify Input / Re-analyze
+                          Back to Edit
                         </button>
 
                         <button
@@ -1595,11 +1574,11 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                           disabled={isAiAnalyzing}
                         >
                           {isAiAnalyzing ? (
-                            "Registering Complaint in Central Registry..."
+                            "Submitting Grievance..."
                           ) : (
                             <>
                               <CheckCircle2 size={16} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "6px" }} />
-                              <span>Confirm AI Routing & Officially Submit Grievance (शिकायत जमा करें)</span>
+                              <span>Confirm & Submit Grievance</span>
                               <ArrowRight size={16} style={{ display: "inline-block", verticalAlign: "middle", marginLeft: "6px" }} />
                             </>
                           )}
@@ -1616,9 +1595,9 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                   <div className="success-seal">
                     <ShieldCheck size={36} color="#059669" />
                   </div>
-                  <span className="success-badge-official"><CheckCircle2 size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> GRIEVANCE REGISTERED & ROUTED SUCCESSFULLY</span>
+                  <span className="success-badge-official"><CheckCircle2 size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} /> GRIEVANCE REGISTERED SUCCESSFULLY</span>
                   <h2 style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                    Acknowledgement Reference: <strong style={{ color: "#0F172A", letterSpacing: "0.5px" }}>{generatedRefId}</strong>
+                    Reference ID: <strong style={{ color: "#0F172A", letterSpacing: "0.5px" }}>{generatedRefId}</strong>
                     <button
                       type="button"
                       onClick={() => {
@@ -1648,7 +1627,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                     </button>
                   </h2>
                   <p className="success-desc">
-                    Your civic issue has been officially registered with Reference ID <strong>{generatedRefId}</strong> and routed to <strong>{confirmedDepartment}</strong> with an active statutory SLA timer.
+                    Your civic issue has been registered with Reference ID <strong>{generatedRefId}</strong> and assigned to <strong>{confirmedDepartment}</strong>.
                   </p>
 
                   <div className="official-receipt-box">
@@ -1728,8 +1707,8 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                   <div className="card-title-group">
                     <span className="card-icon"><FileText size={18} /></span>
                     <div>
-                      <h3>Official Grievance Dossier & Live Priority Tracker</h3>
-                      <p>Track audit trails, Nodal Engineers, and raise your hand to escalate critical civic issues to departments.</p>
+                      <h3>Grievance Tracker</h3>
+                      <p>Track resolution progress, timelines, and assigned nodal officers.</p>
                     </div>
                   </div>
 
@@ -1741,7 +1720,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       onClick={() => setTrackFilter("all")}
                     >
                       <Layers size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
-                      All Complaints ({communityGrievances.length})
+                      All ({communityGrievances.length})
                     </button>
                     <button
                       type="button"
@@ -1749,7 +1728,7 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                       onClick={() => setTrackFilter("highest_priority")}
                     >
                       <Flame size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
-                      Highest Priority / Most Hands Raised
+                      High Priority
                     </button>
                     <button
                       type="button"
@@ -1762,23 +1741,12 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
                   </div>
                 </div>
 
-                {/* Hand Raise Feature Information Strip */}
-                <div className="hand-raise-info-strip">
-                  <div className="info-icon-col"><Flame size={20} color="#D97706" /></div>
-                  <div className="info-text-col">
-                    <strong>Citizen Hand-Raise & Priority Acceleration System:</strong>
-                    <span>
-                      Civic issues with more citizen hand-raises receive priority escalation in the municipal dispatch queue, alerting the Executive Engineer and accelerating repair team dispatch.
-                    </span>
-                  </div>
-                </div>
-
                 {/* Quick Reference Search Bar */}
                 <div style={{ padding: "12px 20px", background: "#F8FAFC", borderBottom: "1px solid #E2E8F0", display: "flex", gap: "10px", alignItems: "center" }}>
                   <Search size={16} style={{ color: "#64748B", flexShrink: 0 }} />
                   <input
                     type="text"
-                    placeholder="Search by Reference Number (e.g. RN20260920A4819) or keyword..."
+                    placeholder="Search by Reference ID (e.g. RN2026...) or keyword..."
                     value={trackSearchQuery}
                     onChange={(e) => setTrackSearchQuery(e.target.value)}
                     style={{
