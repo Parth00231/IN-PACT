@@ -1,47 +1,48 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0b1e36"/>
-      <stop offset="100%" stop-color="#050f1d"/>
+      <stop offset="0%" stop-color="#0F2A4A"/>
+      <stop offset="100%" stop-color="#061527"/>
     </linearGradient>
     <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fcd34d"/>
-      <stop offset="100%" stop-color="#d97706"/>
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#D97706"/>
     </linearGradient>
   </defs>
 
-  <!-- Outer Circle -->
-  <circle cx="64" cy="64" r="62" fill="url(#bgGrad)" stroke="#1e3a8a" stroke-width="2"/>
+  <!-- Full Bleed Outer Circle -->
+  <circle cx="64" cy="64" r="64" fill="url(#bgGrad)"/>
+  <circle cx="64" cy="64" r="62.5" fill="none" stroke="#1E40AF" stroke-width="2"/>
 
-  <!-- Golden Ring & Ticks -->
-  <circle cx="64" cy="64" r="54" fill="none" stroke="url(#goldGrad)" stroke-width="1.5" stroke-dasharray="1 8" stroke-linecap="round"/>
+  <!-- Golden Ring & Accents -->
+  <circle cx="64" cy="64" r="56" fill="none" stroke="url(#goldGrad)" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>
   
-  <!-- Subtle Cardinal Golden Markers -->
-  <circle cx="64" cy="11" r="2.5" fill="#fcd34d"/>
-  <circle cx="64" cy="117" r="2.5" fill="#fcd34d"/>
-  <circle cx="11" cy="64" r="2.5" fill="#fcd34d"/>
-  <circle cx="117" cy="64" r="2.5" fill="#fcd34d"/>
+  <!-- Prominent Cardinal Gold Markers -->
+  <circle cx="64" cy="8" r="3.5" fill="#FCD34D"/>
+  <circle cx="64" cy="120" r="3.5" fill="#FCD34D"/>
+  <circle cx="8" cy="64" r="3.5" fill="#FCD34D"/>
+  <circle cx="120" cy="64" r="3.5" fill="#FCD34D"/>
 
-  <!-- Civic Monument / Pillars / Pediment in Crisp White & Gold -->
+  <!-- Large, Bold Civic Monument / Pillars / Pediment -->
   <!-- Triangular Roof Pediment -->
-  <path d="M40 50 L64 32 L88 50 Z" fill="#ffffff"/>
+  <path d="M22 46 L64 17 L106 46 Z" fill="#FFFFFF"/>
   <!-- Roof Base Beam -->
-  <rect x="37" y="50" width="54" height="5" rx="1.5" fill="#f8fafc"/>
+  <rect x="18" y="46" width="92" height="7" rx="2" fill="#F8FAFC"/>
   <!-- Central Emblem / Ashoka Accent Dot -->
-  <circle cx="64" cy="43" r="2.5" fill="#f59e0b"/>
+  <circle cx="64" cy="34" r="5" fill="#F59E0B"/>
 
-  <!-- 4 Pillars -->
-  <rect x="43" y="57" width="5.5" height="21" rx="1" fill="#ffffff"/>
-  <rect x="53" y="57" width="5.5" height="21" rx="1" fill="#ffffff"/>
-  <rect x="69.5" y="57" width="5.5" height="21" rx="1" fill="#ffffff"/>
-  <rect x="79.5" y="57" width="5.5" height="21" rx="1" fill="#ffffff"/>
+  <!-- 4 Bold Pillars -->
+  <rect x="28" y="55" width="10.5" height="34" rx="2" fill="#FFFFFF"/>
+  <rect x="46.5" y="55" width="10.5" height="34" rx="2" fill="#FFFFFF"/>
+  <rect x="71" y="55" width="10.5" height="34" rx="2" fill="#FFFFFF"/>
+  <rect x="89.5" y="55" width="10.5" height="34" rx="2" fill="#FFFFFF"/>
 
   <!-- Base Podium -->
-  <rect x="39" y="78" width="50" height="5" rx="1.5" fill="#f8fafc"/>
-  <rect x="36" y="83" width="56" height="4" rx="1.5" fill="#cbd5e1"/>
+  <rect x="22" y="89" width="84" height="7" rx="2" fill="#F8FAFC"/>
+  <rect x="16" y="96" width="96" height="7" rx="2" fill="#E2E8F0"/>
 
-  <!-- Tricolor Arc Base / Civic Flow Ribbon -->
-  <path d="M42 96 C49 104, 79 104, 86 96" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round"/>
-  <path d="M47 101 C52 107, 76 107, 81 101" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
-  <path d="M52 106 C56 110, 72 110, 76 106" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Bold Tricolor Flow Arc -->
+  <path d="M24 108 C40 123, 88 123, 104 108" fill="none" stroke="#16A34A" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M30 114 C44 126, 84 126, 98 114" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" opacity="0.95"/>
+  <path d="M38 119 C48 128, 80 128, 90 119" fill="none" stroke="#EA580C" stroke-width="2.5" stroke-linecap="round"/>
 </svg>
