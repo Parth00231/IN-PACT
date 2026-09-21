@@ -859,10 +859,6 @@ export default function CitizenDashboard({ currentUser, navigateTo }) {
               {reportStep === "input" && (
                 <div className="gov-card form-wrapper-card clean-form-card">
                   <div className="ai-report-header">
-                    <div className="ai-badge-top">
-                      <span className="ai-sparkle-icon"><Sparkles size={14} /></span>
-                      <span>SMART REPORTING</span>
-                    </div>
                     <h2>Lodge a Grievance</h2>
                     <p className="ai-header-sub">
                       Attach a photo or describe the issue. Our AI will automatically identify the defect and route it to the concerned department.
